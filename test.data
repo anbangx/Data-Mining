@@ -1,0 +1,5 @@
+0, State-gov, 77516, 1, 13, Never-married, Adm-clerical, Not-in-family, White, female, 2174, 0, 40, United-States, <=50K
+0, Private, 215646, 0, 9, Divorced, Handlers-cleaners, Not-in-family, White, Male, 0, 0, 40, United-States, <=50K
+0, ?, 180211, 1, 10, Married-civ-spouse, ?, Husband, Asian-Pac-Islander, female, 0, 0, 60, South, >50K
+0, ?, 180211, 0, 10, Married-civ-spouse, ?, Husband, Asian-Pac-Islander, Male, 0, 0, 60, South, >50K
+1, ?, 180211, 1, 10, Married-civ-spouse, ?, Husband, Asian-Pac-Islander, Male, 0, 0, 60, South, >50K
