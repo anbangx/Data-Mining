@@ -7,6 +7,33 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+import operator
+from matplotlib.backends.backend_pdf import PdfPages
+
+pp = PdfPages('foo.pdf')
+
+def compute_unique_values(data):
+    print('-----------------------------------------------------------------------------------------------------------')
+    print('Computing unique values for each variable:')
+    dict = {}
+    for j in range(data.shape[1]):
+        grouped = data.groupby(data.columns[j])
+        value_counts = grouped.size()
+        dict[data.columns[j]] = str(value_counts.count())
+        # print(str(value_counts))
+        # print('The total number of unique values is ' + str(value_counts.count()))
+    print(sorted(dict.items()))
+
+def create_dict_categorical_or_numeric(data):
+    print('-----------------------------------------------------------------------------------------------------------')
+    print('Indicating which variable is categorical or numeric:')
+    dict = {}
+    for j in range(data.shape[1]):
+        if type(data.ix[0, j]) is np.int64:
+            dict[data.columns[j]] = 'numeric'
+        else:
+            dict[data.columns[j]] = 'categorical'
+    print(sorted(dict.items()))
 
 def calculate_and_list_missing_data_percentage(data):
     print('-----------------------------------------------------------------------------------------------------------')
@@ -20,7 +47,7 @@ def calculate_and_list_missing_data_percentage(data):
         missing_data_percentage[data.columns[j]] = count/(data.shape[0] * 1.0)
     print('--------------------------------------------------------------')
     print('The percentage of rows have missing values for each variable: ')
-    print(missing_data_percentage)
+    print(sorted(missing_data_percentage.items()))
     print('--------------------------------------------------------------')
 
 def savefig(output_path, fig):
@@ -59,18 +86,23 @@ def gen_num_of_unique_values(variables):
     num_unique_values_per_var = {}
     for j in range(variables.shape[1]):
         num_unique_values_per_var[variables.columns[j]] = np.size(np.unique(variables.ix[:, j]))
+    print(str(sorted(num_unique_values_per_var.items())))
     return num_unique_values_per_var
 
 def draw_hist(numeric_variables, column_name, bin=0, save=True, show=False):
     print('-----------------------------------------------------------------------------------------------------------')
     print('Drawing hist for each numeric variable: ')
     fig = plt.figure()
+    fig.suptitle(column_name)
     if bin > 0:
         numeric_variables[column_name].hist(bins=bin)
     else:
         numeric_variables[column_name].hist()
     if save:
-        savefig('figure/' + column_name + '_hist', fig)
+        if bin > 0:
+            savefig('figure/bigger100/' + column_name + '_hist', fig)
+        else:
+            savefig('figure/less100/' + column_name + '_hist', fig)
     if show:
         plt.show()
 
@@ -78,12 +110,15 @@ def draw_nonzero_hist(numeric_variables, column_name, save=True, show=False):
     print('-----------------------------------------------------------------------------------------------------------')
     print('Drawing nonzero hist for each numeric variable: ')
     nonzero_column = numeric_variables[numeric_variables[column_name] != 0]
+    fraction = (len(numeric_variables) - len(nonzero_column)) / (1.0 * (len(numeric_variables)))
+    print(str(column_name) + ' 0 fraction is: ' + str(fraction))
     if len(nonzero_column) == 0:
         return
     fig = plt.figure()
+    fig.suptitle(column_name)
     nonzero_column[column_name].hist()
     if save:
-        savefig('figure/' + column_name + '_nonzero_hist', fig)
+        savefig('figure/non-zero/' + column_name + '_nonzero_hist', fig)
     if show:
         plt.show()
 
@@ -93,8 +128,8 @@ def subplot(more_salary, less_salary, num_unique_value_per_var, save=True, show=
     for j in range(less_salary.shape[1]):
         column_name = less_salary.columns[j]
         fig, axarr = plt.subplots(2, sharex=True)
-        axarr[0].set_title(more_salary.columns[j] + '(>50K)')
-        axarr[1].set_title(less_salary.columns[j] + '(<=50K)')
+        axarr[0].set_title(more_salary.columns[j] + '(classes>50K)')
+        axarr[1].set_title(less_salary.columns[j] + '(classes<=50K)')
         if(num_unique_value_per_var[column_name] < 100):
             axarr[0].hist(more_salary.ix[:, j])
             axarr[1].hist(less_salary.ix[:, j])
@@ -102,7 +137,9 @@ def subplot(more_salary, less_salary, num_unique_value_per_var, save=True, show=
             axarr[0].hist(more_salary.ix[:, j], bins=100)
             axarr[1].hist(less_salary.ix[:, j], bins=100)
         if save:
-            savefig('figure/' + column_name + '_subplot', fig)
+            savefig('figure/subplot/' + column_name + '_subplot', fig)
+            # plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+            # fig.savefig(pp, format='pdf')
         if show:
             plt.show()
 
@@ -112,14 +149,34 @@ def boxplot(more_salary, less_salary, save=True, show=False):
     for j in range(less_salary.shape[1]):
         column_name = less_salary.columns[j]
         fig = plt.figure()
+        # fig, axarr = plt.subplots(2, sharey=True) TODO how to sharey
+        fig, axarr = plt.subplots(2, sharex=True)
         plt.subplot(1, 2, 1)
+        plt.xlabel(column_name + '(classes>=50K)')
+        # fig.boxplot(more_salary, column=column_name)
         more_salary.boxplot(column=column_name)
         plt.subplot(1, 2, 2)
+        plt.xlabel(column_name + '(classes<50K)')
         less_salary.boxplot(column=column_name)
         if save:
-            savefig('figure/' + column_name + '_boxplot', fig)
+            savefig('figure/boxplot/' + column_name + '_boxplot', fig)
         if show:
             plt.show()
+
+def boxplot_nonzero(more_salary, less_salary, column_name, save=True, show=False):
+    fig = plt.figure()
+    plt.subplot(1, 2, 1)
+    plt.xlabel(column_name + '(classes>=50K)')
+    more_salary = more_salary[more_salary[column_name] != 0]
+    more_salary.boxplot(column=column_name)
+    plt.subplot(1, 2, 2)
+    plt.xlabel(column_name + '(classes<50K)')
+    less_salary = less_salary[less_salary[column_name] != 0]
+    less_salary.boxplot(column=column_name)
+    if save:
+        savefig('figure/boxplot/' + column_name + '-non-zero' + '_boxplot', fig)
+    if show:
+        plt.show()
 
 def barplot_unique_categorical_values(categorial_variable, save=True, show=False):
     print('-----------------------------------------------------------------------------------------------------------')
@@ -128,9 +185,10 @@ def barplot_unique_categorical_values(categorial_variable, save=True, show=False
         column_name = categorial_variable.columns[j]
         grouped_by_age = categorial_variable.groupby(column_name)
         fig = plt.figure()
+        fig.suptitle(column_name)
         grouped_by_age.size().plot(kind='bar')
         if save:
-            savefig('figure/' + column_name + '_unique_values_barplot', fig)
+            savefig('figure/barplot/' + column_name + '_unique_values_barplot', fig)
         if show:
             plt.show()
 
@@ -142,6 +200,7 @@ def barplot_compare_two_classes(more_salary, less_salary, save=True, show=False)
 
         fig = plt.figure()
         plt.subplot(2, 1, 1)
+        fig.suptitle(column_name + '(classes>=50K)[top] vs classes<50K[bottom]')
         grouped_by_age = more_salary.groupby(column_name)
         grouped_by_age.size().plot(kind='bar')
 
@@ -149,7 +208,7 @@ def barplot_compare_two_classes(more_salary, less_salary, save=True, show=False)
         grouped_by_age = less_salary.groupby(column_name)
         grouped_by_age.size().plot(kind='bar')
         if save:
-            savefig('figure/' + column_name + '_comparison_barplot', fig)
+            savefig('figure/2barplot/' + column_name + '_comparison_barplot', fig)
         if show:
             plt.show()
 
@@ -166,35 +225,42 @@ def compute_expected_information_gain(data):
         f = len(v) / (1.0 * data.shape[0])
         old_entropy += entropy(f)
     print('Old Entropy = ' + str(old_entropy))
-    grouped_by_age = data[['age', 'salary']].groupby(['age'])
-    expected_new_entropy = 0
-    for name, group in grouped_by_age:
-        size = len(group)
-        for subname, subgroup in group.groupby(['salary']):
-            subsize = len(subgroup)
-            f = subsize / (1.0 * size)
-            expected_new_entropy += entropy(f) * (size / (data.shape[0] * 1.0))
-    print('Expected New Entropy = ' + str(expected_new_entropy))
-    print('Expected information gain = ' + str(old_entropy - expected_new_entropy))
+    for j in range(data.shape[1]):
+        if data.columns[j] == 'salary':
+            continue
+        grouped_by_age = data[[data.columns[j], 'salary']].groupby([data.columns[j]])
+        expected_new_entropy = 0
+        dict = {}
+        for name, group in grouped_by_age:
+            size = len(group)
+            for subname, subgroup in group.groupby(['salary']):
+                subsize = len(subgroup)
+                f = subsize / (1.0 * size)
+                expected_new_entropy += entropy(f) * (size / (data.shape[0] * 1.0))
+        dict[data.columns[j]] = expected_new_entropy
+        print(str(sorted(dict.items())))
+        print('Expected information gain = ' + str(old_entropy - expected_new_entropy))
+        print('-----------------------------------------------------------------------------------------------------------')
 
-def compute_conditional_probabilities_for_age(data):
+def compute_conditional_probabilities_for_age(data, compare_column):
     print('-----------------------------------------------------------------------------------------------------------')
     print('Computing conditional probabilities of education for age: ')
-    binned_age = pd.cut(data.age, 2)
+    binned_age = pd.cut(data.age, 10)
     data['binned_age'] = binned_age
     del data['age']
-    for name, group in data[['binned_age', 'education']].groupby(['education']):
-        ct = pd.crosstab(group['education'], group['binned_age'], margins=True,
-                 rownames=['education'], colnames=['binned_age'])
+    for name, group in data[['binned_age', compare_column]].groupby([compare_column]):
+        ct = pd.crosstab(group[compare_column], group['binned_age'], margins=True,
+                 rownames=[compare_column], colnames=['binned_age'])
         columns = group.columns
-        for i in range(len(columns)):
-            ct['P(age = ' + str(ct.columns[i]) + ' | education = ' + str(name) + ')'] = np.true_divide(
+        for i in range(5):  # TODO fix
+            ct['P(age = ' + str(ct.columns[i]) + ' | ' + compare_column + ' = ' + str(name) + ')'] = np.true_divide(
                 ct[ct.columns[i]], ct['All'])
         print(ct)
 
 def check_pairwise_dependency(data, variable1, variable2):
     print('-----------------------------------------------------------------------------------------------------------')
     print('Checking pairwise dependency between ' + variable1 + ' and ' + variable2 + ': ')
+
     for name, group in data[[variable1, variable2]].groupby([variable2]):
         ct = pd.crosstab(group[variable2], group[variable1], margins=True,
                  rownames=[variable2], colnames=[variable1])
@@ -208,20 +274,40 @@ if __name__ == '__main__':
     variable_names = ['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 
                       'occupation', 'relationship', 'race', 'sex', 'capital-gain', 'capital-loss',
                       'hours-per-week', 'native-country', 'salary']
-    data = pd.read_csv('test.data', delimiter=',', skipinitialspace=True, names=variable_names)
+    data = pd.read_csv('adult.data', delimiter=',', skipinitialspace=True, names=variable_names)
+    # print(data)
+    ''' 1.1 figure out how many unique values there are for each variable '''
+    # compute_unique_values(data)
+    ''' 1.2 create a vector that indicates which variables are categorical and which are numeric '''
+    create_dict_categorical_or_numeric(data)
 
     # part 2 Exploratory Data Analysis
-    ''' 1. Variable Definitions '''
+    ''' 1. Variable Definitions
+    age: the age of the individual as reported by the individual at the time of the 1990 census, in integer units of years.
+    workclass: a section of society dependent on physical labor, especially when compensated with an hourly wage
+    fnlwgt: final weight(no clear definition)
+    education: the highest level of education
+    education-num: the amount of people receiving education
+    marital-status: indicates whether the person is married
+    occupation: a job or profession
+    relationship: the way in which two or more people or things are connected
+    race: a classification system used to categorize humans into large and distinct populations or groups
+    sex: specialized into male and female varieties
+    capital-gain: a profit that results from a disposition of a capital asset, such as stock, bond or real estate
+    capital-loss: the difference between a lower selling price and a higher purchase price, resulting in a financial loss for the seller
+    hours-per-week: the number of hours to work per week
+    native-country: which country you consider to be your "home" or the country of your birth
+    '''
     ''' 2. Missing data '''
     ''' 2.1. For each variable calculate and list what percentage of rows have missing values for that variable '''
-    calculate_and_list_missing_data_percentage(data)
+    # calculate_and_list_missing_data_percentage(data)
 
     ''' 2.2. Generate a histogram indicating how many rows have 0, 1, 2, 3, .... missing values '''
-    gen_missing_data_hist(data)
+    # gen_missing_data_hist(data, show=True)
     
     ''' 3. Numeric Variables: '''
     numeric_variables = data._get_numeric_data()
-    # print(numeric_variables)
+    print(numeric_variables)
     ''' 3.1 list the number of unique values for each variable '''
     num_unique_value_per_var = gen_num_of_unique_values(numeric_variables)
     for k, v in num_unique_value_per_var.items():
@@ -236,8 +322,8 @@ if __name__ == '__main__':
     
     ''' 3.4 for the variables capital-gain,capital-loss, since they have a very large fraction of 0 values, just plot histograms
         of the non-zero values and list what fraction of values of the variable are equal to 0. '''
-    draw_nonzero_hist(numeric_variables, 'capital-gain')
-    draw_nonzero_hist(numeric_variables, 'capital-loss')
+    # draw_nonzero_hist(numeric_variables, 'capital-gain')
+    # draw_nonzero_hist(numeric_variables, 'capital-loss')
     
     ''' 3.5 For each variable, now plot 2 histograms as part of the same figure (using the same bins as before), one histogram
         directly above the other and with the same bins for each histogram, where the top histogram is for rows assigned to the
@@ -247,43 +333,58 @@ if __name__ == '__main__':
     less_salary = numeric_variables[numeric_variables['salary'] == '<=50K']
     del more_salary['salary']
     del less_salary['salary']
-    subplot(more_salary, less_salary, num_unique_value_per_var)
+    # subplot(more_salary, less_salary, num_unique_value_per_var)
         
     ''' 3.6 For each variable, generate a figure with 2 boxplots, side by side, where the left boxplot is for rows assigned to
         the class >50k, and the right box-plot is for the class <=50k '''
-    boxplot(more_salary, less_salary)
-    
+    # boxplot(more_salary, less_salary)
+    # boxplot_nonzero(more_salary, less_salary, 'capital-gain')
+    # boxplot_nonzero(more_salary, less_salary, 'capital-loss')
+
     # 4. Categorial Variables
     categorial_variable = data.drop(numeric_variables.columns, axis=1)
     categorial_variable['salary'] = data['salary']
     # print(categorial_variable)
     ''' 4.1 generate a bar-plot, where the values for each bar correspond to the unique categorical values for each variable.
         Include the "?" symbol (indicating a missing value) as one of the possible values in your bar-plot. '''
-    barplot_unique_categorical_values(categorial_variable)
+    # barplot_unique_categorical_values(categorial_variable)
     
     ''' 4.2 For each variable generate 2 barplots in a single figure, one above the other, where the top barplot is for rows
         assigned to the class >50k, and the lower barplot is for rows assigned to the class <=50k '''
-    more_salary = categorial_variable[categorial_variable['salary'] == '>50K']
-    less_salary = categorial_variable[categorial_variable['salary'] == '<=50K']
-    del more_salary['salary']
-    del less_salary['salary']
-    barplot_compare_two_classes(more_salary, less_salary)
+    # more_salary = categorial_variable[categorial_variable['salary'] == '>50K']
+    # less_salary = categorial_variable[categorial_variable['salary'] == '<=50K']
+    # del more_salary['salary']
+    # del less_salary['salary']
+    # barplot_compare_two_classes(more_salary, less_salary)
 
     ''' 4.3 Compute the expected information gain (base log2), relative to the class variable '''
-    compute_expected_information_gain(data)
+    compute_expected_information_gain(data.copy())
 
     # 5. Pairwise dependency on Age
     ''' 5.1. compute the conditional probabilities of a categorial variable '''
-    compute_conditional_probabilities_for_age(data.copy())
+    # compute_conditional_probabilities_for_age(data.copy(), 'education-num')
 
     ''' 5.2. pick any 2 of the numeric variables and explore whether or not they depend on each other,i.e., are they
         independent or not? if they are dependent, explain how you determined this and what the dependence is. If you
         wish (but this is not necessary) you can discretize the 2 variables you select for this part of the assignment.
     '''
     # variable1: age, variable2: sex
-    check_pairwise_dependency(data, 'age', 'sex')
+    # check_pairwise_dependency(data, 'education-num', 'hours-per-week')
     # variable1: age, variable2: hours-per-week
-    check_pairwise_dependency(data, 'age', 'hours-per-week')
+    # check_pairwise_dependency(data, 'age', 'hours-per-week')
 
-        
-        
+    # binned_hours = pd.cut(data['hours-per-week'], 4)
+    # data['hours-per-week'] = binned_hours
+    # binned_age = pd.cut(data.age, 10)
+    # data['binned_age'] = binned_age
+    # del data['age']
+    # for name, group in data[['binned_age', 'hours-per-week']].groupby(['hours-per-week']):
+    #     ct = pd.crosstab(group['hours-per-week'], group['binned_age'], margins=True,
+    #              rownames=['hours-per-week'], colnames=['binned_age'])
+    #     columns = group.columns
+    #     for i in range(5):  # TODO fix
+    #         ct['P(age = ' + str(ct.columns[i]) + ' | ' + 'hours-per-week' + ' = ' + str(name) + ')'] = np.true_divide(
+    #             ct[ct.columns[i]], ct['All'])
+    #     print(ct)
+
+    pp.close()
