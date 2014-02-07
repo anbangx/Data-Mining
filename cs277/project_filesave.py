@@ -34,15 +34,18 @@ fileTestFractionSize = 1
 # Define Regular Expression to pre-process strings. Only AlphaNumeric and whitespace will be kept.
 strPattern = re.compile('[^a-zA-Z0-9 ]')
 
-# A List which keeps token and its frequency for each category. It will keep a dictionary in a list.
-# Example : {[0] : 'acq', [1] : {'hi':1,'compu':3,'move':1 ...}}
-categoryAlphaNumericStrStemmedList = []
-categoryTestAlphaNumericStrStemmedList = []
+# A dictionary which keeps token and its frequency for each category. It will keep a Dictionary in a Dictionary.
+# key - category, value-{'term':frequency}
+# Example : {'acq' : {'hi':1,'compu':3,'move':1 ...}}
+categoryAlphaNumericStrStemmedDict = {}
+categoryTestAlphaNumericStrStemmedDict = {}
 
-# A List which keeps token and its frequency for each file. It will keep a dictionary in a list.
-# Example : {[0] : 'acq', [1] : '000056', [2] : {'hi':1,'compu':3,'move':1 ...}}
-fileAlphaNumericStrStemmedList = []
-fileTestAlphaNumericStrStemmedList = []
+# A dictionary which keeps token, its frequency, and category for each file. It is layered Dictionary structure.
+# 1st layer Dict {A}: key - category, value-{'term':frequency}
+# 2nd layer Dict {B}: key - filename, value-{A}
+# Example : {'000056' : {'acq' : {'hi':1, 'compu:3, 'move':1 ...}}}
+fileAlphaNumericStrStemmedDict = {}
+fileTestAlphaNumericStrStemmedDict = {}
 
 # A list which keeps whole vocabularies throughout whole categories. It will be sorted.
 # Example : ['current', 'curtail', 'custom', 'cut', 'cuurent', 'cvg', 'cwt', 'cypru', 'cyrpu', 'd', 'daili' ...]
@@ -54,6 +57,10 @@ wholeTestVocabularyList = []
 wholeVocabularyFrequency = 0
 wholeTestVocabularyFrequency = 0
 
+# A dictionary which keeps entire vocabulary and its frequency across whole categories
+# Example : {'current' : 110, 'said' : 10000 ...... }
+wholeVocabularyFrequencyDict = {}
+wholeVocabularyTestFrequencyDict = {}
 
 # Read Training Data Set
 print "\nReading Training data Set"
@@ -72,10 +79,10 @@ for category in categoryList:
 #         break
     
     fileInCategoryList = os.listdir("./dataset/Reuters21578-Apte-115Cat/training/" + category + "/")
-    tmpCategoryAlphaNumericStrStemmedDictoinary = {}
-    # categoryAlphaNumericStrStemmedList[categoryNum][0] = category
-    categoryTmpColumn = []
-    categoryTmpColumn.append(str(category))
+    tmpCategoryAlphaNumericStrStemmedDict = {}
+    # categoryAlphaNumericStrStemmedDict[categoryNum][0] = category
+    # categoryTmpColumn = {}
+    # categoryTmpColumn.append(str(category))
     tmpFileNum = 0
     tmpFreqPerCategory= 0
     tmpNumberOfUniqueTermPerCategory = 0
@@ -89,9 +96,10 @@ for category in categoryList:
         chunkReadSize = int(round(filesize * fileFractionSize))
         f = open(fileToTrainPath)
         fileStr = f.read(chunkReadSize)
-        fileTmpColumn = []
-        fileTmpColumn.append(str(category))
-        fileTmpColumn.append(str(fileToTrain))
+        fileTmpColumn = {}
+        fileTmpColumn1 = {}
+        # fileTmpColumn.append(str(category))
+        # fileTmpColumn.append(str(fileToTrain))
 
         # Remove non alphanumeric characters in the chunk
         fileAlphaNumericStr = re.sub(strPattern, ' ', fileStr)
@@ -104,35 +112,37 @@ for category in categoryList:
         fileAlphaNumericStrList = fileAlphaNumericStrNoStopWords.split()
 #         fileAlphaNumericStrList = fileAlphaNumericStr.split()
 
-        # Apply Porter Stemmer and Put token and frequency to One dictionary
-        tmpFileAlphaNumericStrStemmedDictionary = {}
+        # Apply Porter Stemmer and Put token and frequency to One Dict
+        tmpFileAlphaNumericStrStemmedDict = {}
 
-        # Create vector space (dictionary) for each category
+        # Create vector space (Dict) for each category
         for words in fileAlphaNumericStrList:
             tmp = stemmer.stem(words)
-            if tmpFileAlphaNumericStrStemmedDictionary.get(tmp) == None:
-                tmpFileAlphaNumericStrStemmedDictionary[tmp] = 1
+            if tmpFileAlphaNumericStrStemmedDict.get(tmp) == None:
+                tmpFileAlphaNumericStrStemmedDict[tmp] = 1
             else:
-                tmpFileAlphaNumericStrStemmedDictionary[tmp] += 1
-            if tmpCategoryAlphaNumericStrStemmedDictoinary.get(tmp) == None:
-                tmpCategoryAlphaNumericStrStemmedDictoinary[tmp] = 1
+                tmpFileAlphaNumericStrStemmedDict[tmp] += 1
+            if tmpCategoryAlphaNumericStrStemmedDict.get(tmp) == None:
+                tmpCategoryAlphaNumericStrStemmedDict[tmp] = 1
             else:
-                tmpCategoryAlphaNumericStrStemmedDictoinary[tmp] += 1
+                tmpCategoryAlphaNumericStrStemmedDict[tmp] += 1
             tmpFreqPerCategory += 1    
             if tmp not in wholeVocabularySet:
                 wholeVocabularySet.add(tmp)
 
-        fileTmpColumn.append(tmpFileAlphaNumericStrStemmedDictionary)
-        fileAlphaNumericStrStemmedList.append(fileTmpColumn)
+        fileTmpColumn1[str(category)] = tmpFileAlphaNumericStrStemmedDict
+        # fileTmpColumn.append(tmpFileAlphaNumericStrStemmedDict)
+        # fileTmpColumn[str(fileToTrain)] = fileTmpColumn1 
+        fileAlphaNumericStrStemmedDict[str(fileToTrain)] = fileTmpColumn1
         fileNum += 1
         tmpFileNum += 1
         
-    categoryTmpColumn.append(tmpCategoryAlphaNumericStrStemmedDictoinary)
-    categoryAlphaNumericStrStemmedList.append(categoryTmpColumn)
+    # categoryTmpColumn.append(tmpCategoryAlphaNumericStrStemmedDict)
+    categoryAlphaNumericStrStemmedDict[str(category)] = tmpCategoryAlphaNumericStrStemmedDict
     categoryNum += 1
     wholeVocabularyFrequency += tmpFreqPerCategory
     
-    print "%6.3g"%(time.time() - startTime) + "\t" + "%6.3g"%(time.time() - tmpTime) + "\t" + str(categoryNum) +  "\t" + category + "\t" + str(tmpFileNum) + "\t" + str(len(tmpCategoryAlphaNumericStrStemmedDictoinary)) + "\t" + str(tmpFreqPerCategory)
+    print "%6.3g"%(time.time() - startTime) + "\t" + "%6.3g"%(time.time() - tmpTime) + "\t" + str(categoryNum) +  "\t" + category + "\t" + str(tmpFileNum) + "\t" + str(len(tmpCategoryAlphaNumericStrStemmedDict)) + "\t" + str(tmpFreqPerCategory)
 
 
 print "\nReading Test data Set"
@@ -150,10 +160,10 @@ for categoryTest in categoryTestList:
 #         break
     
     fileInCategoryTestList = os.listdir("./dataset/Reuters21578-Apte-115Cat/test/" + categoryTest + "/")
-    tmpCategoryTestAlphaNumericStrStemmedDictoinary = {}
-    # categoryAlphaNumericStrStemmedList[categoryNum][0] = category
-    categoryTestTmpColumn = []
-    categoryTestTmpColumn.append(str(categoryTest))
+    tmpCategoryTestAlphaNumericStrStemmedDict = {}
+    # categoryAlphaNumericStrStemmedDict[categoryNum][0] = category
+    # categoryTestTmpColumn = []
+    # categoryTestTmpColumn.append(str(categoryTest))
     tmpFileTestNum = 0
     tmpFreqPerCategoryTest= 0
     tmpNumberOfUniqueTermPerCategoryTest = 0
@@ -167,9 +177,11 @@ for categoryTest in categoryTestList:
         chunkTestReadSize = int(round(filesizeTest * fileTestFractionSize))
         f = open(fileToTestPath)
         fileTestStr = f.read(chunkTestReadSize)
-        fileTestTmpColumn = []
-        fileTestTmpColumn.append(str(categoryTest))
-        fileTestTmpColumn.append(str(fileToTest))
+        fileTestTmpColumn = {}
+        # fileTestTmp1Column = {}
+        
+        # fileTestTmpColumn.append(str(categoryTest))
+        # fileTestTmpColumn.append(str(fileToTest))
 
         # Remove non alphanumeric characters in the chunk
         fileTestAlphaNumericStr = re.sub(strPattern, ' ', fileTestStr)
@@ -181,35 +193,36 @@ for categoryTest in categoryTestList:
         fileTestAlphaNumericStrNoStopWords = ' '.join([word for word in fileTestAlphaNumericStr.split() if word not in stopwordsList])
         fileTestAlphaNumericStrList = fileTestAlphaNumericStrNoStopWords.split()
 
-        # Apply Porter Stemmer and Put token and frequency to One dictionary
-        tmpFileTestAlphaNumericStrStemmedDictionary = {}
+        # Apply Porter Stemmer and Put token and frequency to One Dict
+        tmpFileTestAlphaNumericStrStemmedDict = {}
 
-        # Create vector space (dictionary) for each category
+        # Create vector space (Dict) for each category
         for words in fileTestAlphaNumericStrList:
             tmp = stemmer.stem(words)
-            if tmpFileTestAlphaNumericStrStemmedDictionary.get(tmp) == None:
-                tmpFileTestAlphaNumericStrStemmedDictionary[tmp] = 1
+            if tmpFileTestAlphaNumericStrStemmedDict.get(tmp) == None:
+                tmpFileTestAlphaNumericStrStemmedDict[tmp] = 1
             else:
-                tmpFileTestAlphaNumericStrStemmedDictionary[tmp] += 1
-            if tmpCategoryTestAlphaNumericStrStemmedDictoinary.get(tmp) == None:
-                tmpCategoryTestAlphaNumericStrStemmedDictoinary[tmp] = 1
+                tmpFileTestAlphaNumericStrStemmedDict[tmp] += 1
+            if tmpCategoryTestAlphaNumericStrStemmedDict.get(tmp) == None:
+                tmpCategoryTestAlphaNumericStrStemmedDict[tmp] = 1
             else:
-                tmpCategoryTestAlphaNumericStrStemmedDictoinary[tmp] += 1
+                tmpCategoryTestAlphaNumericStrStemmedDict[tmp] += 1
             tmpFreqPerCategoryTest += 1    
             if tmp not in wholeTestVocabularySet:
                 wholeTestVocabularySet.add(tmp)
 
-        fileTestTmpColumn.append(tmpFileTestAlphaNumericStrStemmedDictionary)
-        fileTestAlphaNumericStrStemmedList.append(fileTestTmpColumn)
+        fileTestTmpColumn[str(categoryTest)] = tmpFileTestAlphaNumericStrStemmedDict
+        # fileTestTmpColumn.append(tmpFileTestAlphaNumericStrStemmedDict)
+        fileTestAlphaNumericStrStemmedDict[str(fileToTest)] = fileTestTmpColumn
         fileTestNum += 1
         tmpFileTestNum += 1
         
-    categoryTestTmpColumn.append(tmpCategoryTestAlphaNumericStrStemmedDictoinary)
-    categoryTestAlphaNumericStrStemmedList.append(categoryTestTmpColumn)
+    # categoryTestTmpColumn.append(tmpCategoryTestAlphaNumericStrStemmedDict)
+    categoryTestAlphaNumericStrStemmedDict[str(category)] = tmpCategoryTestAlphaNumericStrStemmedDict
     categoryTestNum += 1
     wholeTestVocabularyFrequency += tmpFreqPerCategoryTest
     
-    print "%6.3g"%(time.time() - startTime) + "\t" + "%6.3g"%(time.time() - tmpTime) + "\t" + str(categoryTestNum) +  "\t" + categoryTest + "\t" + str(tmpFileTestNum) + "\t" + str(len(tmpCategoryTestAlphaNumericStrStemmedDictoinary)) + "\t" + str(tmpFreqPerCategoryTest)
+    print "%6.3g"%(time.time() - startTime) + "\t" + "%6.3g"%(time.time() - tmpTime) + "\t" + str(categoryTestNum) +  "\t" + categoryTest + "\t" + str(tmpFileTestNum) + "\t" + str(len(tmpCategoryTestAlphaNumericStrStemmedDict)) + "\t" + str(tmpFreqPerCategoryTest)
 
 
 # Sort entire Vocabulary
@@ -218,6 +231,10 @@ wholeVocabularyList.sort()
 
 wholeTestVocabularyList = list(wholeTestVocabularySet)
 wholeTestVocabularyList.sort()
+
+
+
+
 
 print
 print "Statistics of Entire Training data Set"
@@ -231,7 +248,7 @@ print "# of Frequency:\t" + str(wholeVocabularyFrequency)
 # print wholeVocabularyList
 
 # for i in range(0,categoryNum):
-#    print str(categoryAlphaNumericStrStemmedList[i][0]) + " ::::::: " + str(categoryAlphaNumericStrStemmedList[i][1])
+#    print str(categoryAlphaNumericStrStemmedDict[i][0]) + " ::::::: " + str(categoryAlphaNumericStrStemmedDict[i][1])
 
 
 # A two dimensional List which keeps frequency of term per category. 
@@ -244,29 +261,49 @@ print "# of Frequency:\t" + str(wholeVocabularyFrequency)
 termFrequencyPerCategoryList = []
 
 # Creating A two dimensional List which keeps frequency of term per category
-for categoryRow in categoryAlphaNumericStrStemmedList:
+for key,value in categoryAlphaNumericStrStemmedDict.iteritems():
     tmpColumn = []
-    category = categoryRow[0]
-    tmpColumn.append(category)
-    categoryTermFreq = categoryRow[1]
+    tmpColumn.append(key)
     for term in wholeVocabularyList:
-        tmp = categoryTermFreq.get(term)
+        tmp = value.get(term)
         if tmp == None:
             tmpColumn.append(0)
         else:
             tmpColumn.append(tmp)
     termFrequencyPerCategoryList.append(tmpColumn)
 
+# Put frequency of each terms across entire categories
+for key1, value1 in categoryAlphaNumericStrStemmedDict.iteritems():
+    tmpDict = value1
+    for key, value in tmpDict.iteritems():
+        tmp = wholeVocabularyFrequencyDict.get(key)
+        if tmp == None:
+            wholeVocabularyFrequencyDict[key] = value
+        else:
+            wholeVocabularyFrequencyDict[key] = tmp + value
+
+# Put frequency of each terms across entire categories
+for key1, value1 in categoryTestAlphaNumericStrStemmedDict.iteritems():
+    tmpDict = value1
+    for key, value in tmpDict.iteritems():
+        tmp = wholeVocabularyTestFrequencyDict.get(key)
+        if tmp == None:
+            wholeVocabularyTestFrequencyDict[key] = value
+        else:
+            wholeVocabularyTestFrequencyDict[key] = tmp + value
+            
 pickle.dump(fileFractionSize, outputFile, -1)
 pickle.dump(fileTestFractionSize, outputFile, -1)
-pickle.dump(categoryAlphaNumericStrStemmedList, outputFile, -1)
-pickle.dump(categoryTestAlphaNumericStrStemmedList, outputFile, -1)
-pickle.dump(fileAlphaNumericStrStemmedList, outputFile, -1)
-pickle.dump(fileTestAlphaNumericStrStemmedList, outputFile, -1)
+pickle.dump(categoryAlphaNumericStrStemmedDict, outputFile, -1)
+pickle.dump(categoryTestAlphaNumericStrStemmedDict, outputFile, -1)
+pickle.dump(fileAlphaNumericStrStemmedDict, outputFile, -1)
+pickle.dump(fileTestAlphaNumericStrStemmedDict, outputFile, -1)
 pickle.dump(wholeVocabularyList, outputFile, -1)
 pickle.dump(wholeTestVocabularyList, outputFile, -1)
 pickle.dump(wholeVocabularyFrequency, outputFile, -1)
 pickle.dump(wholeTestVocabularyFrequency, outputFile, -1)
+pickle.dump(wholeVocabularyFrequencyDict, outputFile, -1)
+pickle.dump(wholeVocabularyTestFrequencyDict, outputFile, -1)
 pickle.dump(categoryNum, outputFile, -1)
 pickle.dump(fileNum, outputFile, -1)
 pickle.dump(categoryTestNum, outputFile, -1)
@@ -310,3 +347,4 @@ decisionTree(termFrequencyPerCategoryList)
 # Execute NaiveBayes algorithm
 naiveBayes(termFrequencyPerCategoryList)
     
+
