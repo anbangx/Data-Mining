@@ -62,6 +62,17 @@ wholeTestVocabularyFrequency = 0
 wholeVocabularyFrequencyDict = {}
 wholeVocabularyTestFrequencyDict = {}
 
+# A dictionary which keeps number of files in each category
+# Example : {'acq': 115, 'alum': 222 ...}
+numberOfFilesInEachCategoryDict = {} 
+numberOfFilesInEachCategoryTestDict = {} 
+
+# A dictionary which keeps fraction of [number of files in each category] / [number of entire files]
+# Example : {'acq':0.015, 'alum':0.031 ...}
+fractionOfFilesInEachCategoryDict = {} 
+fractionOfFilesInEachCategoryTestDict = {} 
+
+
 # Read Training Data Set
 print "\nReading Training data Set"
 print "Elap(s)\Dur(s)\tCategory#\tName\t#ofFile\t#ofUniqueTerms\t#Frequency"
@@ -291,7 +302,32 @@ for key1, value1 in categoryTestAlphaNumericStrStemmedDict.iteritems():
             wholeVocabularyTestFrequencyDict[key] = value
         else:
             wholeVocabularyTestFrequencyDict[key] = tmp + value
-            
+
+# Calculate fractionOfFilesInEachCategoryDict
+for key1, value1 in fileAlphaNumericStrStemmedDict.iteritems():
+    for key, value in value1.iteritems():
+        tmp = numberOfFilesInEachCategoryDict.get(key)
+        if tmp == None:
+            numberOfFilesInEachCategoryDict[key] = 1
+        else:
+            numberOfFilesInEachCategoryDict[key] = tmp + 1
+
+for key1, value1 in numberOfFilesInEachCategoryDict.iteritems():
+    fractionOfFilesInEachCategoryDict[key1] = value1 / fileNum
+
+# Calculate fractionOfFilesInEachCategoryTestDict
+for key1, value1 in fileTestAlphaNumericStrStemmedDict.iteritems():
+    for key, value in value1.iteritems():
+        tmp = numberOfFilesInEachCategoryTestDict.get(key)
+        if tmp == None:
+            numberOfFilesInEachCategoryTestDict[key] = 1
+        else:
+            numberOfFilesInEachCategoryTestDict[key] = tmp + 1
+
+for key1, value1 in numberOfFilesInEachCategoryTestDict.iteritems():
+    fractionOfFilesInEachCategoryTestDict[key1] = value1 / fileTestNum
+    
+           
 pickle.dump(fileFractionSize, outputFile, -1)
 pickle.dump(fileTestFractionSize, outputFile, -1)
 pickle.dump(categoryAlphaNumericStrStemmedDict, outputFile, -1)
@@ -304,6 +340,10 @@ pickle.dump(wholeVocabularyFrequency, outputFile, -1)
 pickle.dump(wholeTestVocabularyFrequency, outputFile, -1)
 pickle.dump(wholeVocabularyFrequencyDict, outputFile, -1)
 pickle.dump(wholeVocabularyTestFrequencyDict, outputFile, -1)
+pickle.dump(numberOfFilesInEachCategoryDict, outputFile, -1)
+pickle.dump(numberOfFilesInEachCategoryTestDict, outputFile, -1)
+pickle.dump(fractionOfFilesInEachCategoryDict, outputFile, -1)
+pickle.dump(fractionOfFilesInEachCategoryTestDict, outputFile, -1)
 pickle.dump(categoryNum, outputFile, -1)
 pickle.dump(fileNum, outputFile, -1)
 pickle.dump(categoryTestNum, outputFile, -1)
