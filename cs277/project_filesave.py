@@ -310,4 +310,3 @@ decisionTree(termFrequencyPerCategoryList)
 # Execute NaiveBayes algorithm
 naiveBayes(termFrequencyPerCategoryList)
     
-
