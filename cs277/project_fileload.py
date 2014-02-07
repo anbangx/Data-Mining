@@ -21,15 +21,18 @@ fileTestFractionSize = pickle.load(outputFile)
 # Define Regular Expression to pre-process strings. Only AlphaNumeric and whitespace will be kept.
 strPattern = re.compile('[^a-zA-Z0-9 ]')
 
-# A List which keeps token and its frequency for each category. It will keep a dictionary in a list.
-# Example : {[0] : 'acq', [1] : {'hi':1,'compu':3,'move':1 ...}}
-categoryAlphaNumericStrStemmedList = pickle.load(outputFile)
-categoryTestAlphaNumericStrStemmedList = pickle.load(outputFile)
+# A dictionary which keeps token and its frequency for each category. It will keep a Dictionary in a Dictionary.
+# key - category, value-{'term':frequency}
+# Example : {'acq' : {'hi':1,'compu':3,'move':1 ...}}
+categoryAlphaNumericStrStemmedDict = pickle.load(outputFile)
+categoryTestAlphaNumericStrStemmedDict = pickle.load(outputFile)
 
-# A List which keeps token and its frequency for each file. It will keep a dictionary in a list.
-# Example : {[0] : 'acq', [1] : '000056', [2] : {'hi':1,'compu':3,'move':1 ...}}
-fileAlphaNumericStrStemmedList = pickle.load(outputFile)
-fileTestAlphaNumericStrStemmedList = pickle.load(outputFile)
+# A dictionary which keeps token, its frequency, and category for each file. It is layered Dictionary structure.
+# 1st layer Dict {A}: key - category, value-{'term':frequency}
+# 2nd layer Dict {B}: key - filename, value-{A}
+# Example : {'000056' : {'acq' : {'hi':1, 'compu:3, 'move':1 ...}}}
+fileAlphaNumericStrStemmedDict = pickle.load(outputFile)
+fileTestAlphaNumericStrStemmedDict = pickle.load(outputFile)
 
 # A list which keeps whole vocabularies throughout whole categories. It will be sorted.
 # Example : ['current', 'curtail', 'custom', 'cut', 'cuurent', 'cvg', 'cwt', 'cypru', 'cyrpu', 'd', 'daili' ...]
@@ -39,11 +42,17 @@ wholeTestVocabularyList = pickle.load(outputFile)
 wholeVocabularyFrequency = pickle.load(outputFile)
 wholeTestVocabularyFrequency = pickle.load(outputFile)
 
+# A dictionary which keeps entire vocabulary and its frequency across whole categories
+# Example : {'current' : 110, 'said' : 10000 ...... }
+wholeVocabularyFrequencyDict = pickle.load(outputFile)
+wholeVocabularyTestFrequencyDict = pickle.load(outputFile)
+
 categoryNum = pickle.load(outputFile)
 fileNum = pickle.load(outputFile)
 
 categoryTestNum = pickle.load(outputFile)
 fileTestNum = pickle.load(outputFile)
+
 
 # A two dimensional List which keeps frequency of term per category. 
 # row = category. column = frequency of each term in that category.
@@ -61,29 +70,7 @@ print
 # print categoryTestNum
 # print fileTestNum
 
-wholeVocabularyFrequencyDict = {}
-
-for category in categoryAlphaNumericStrStemmedList:
-    tmpDict = category[1]
-    for key, value in tmpDict.iteritems():
-        tmp = wholeVocabularyFrequencyDict.get(key)
-        if tmp == None:
-            wholeVocabularyFrequencyDict[key] = value
-        else:
-            wholeVocabularyFrequencyDict[key] = tmp + value
-
-wholeVocabularyTestFrequencyDict = {}
-
-for category in categoryTestAlphaNumericStrStemmedList:
-    tmpDict = category[1]
-    for key, value in tmpDict.iteritems():
-        tmp = wholeVocabularyTestFrequencyDict.get(key)
-        if tmp == None:
-            wholeVocabularyTestFrequencyDict[key] = value
-        else:
-            wholeVocabularyTestFrequencyDict[key] = tmp + value
-
-print wholeVocabularyTestFrequencyDict
+# print wholeVocabularyTestFrequencyDict
 
 print len(wholeVocabularyList)
 print len(wholeTestVocabularyList)
