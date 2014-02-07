@@ -1,16 +1,17 @@
+#!/usr/bin/python
 '''
 Created on Jan 8, 2014
-
 @author: anbangx
 '''
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import math
+import sys
 import operator
 from matplotlib.backends.backend_pdf import PdfPages
 
-pp = PdfPages('foo.pdf')
+# pp = PdfPages('foo.pdf')
 
 def compute_unique_values(data):
     print('-----------------------------------------------------------------------------------------------------------')
@@ -20,9 +21,7 @@ def compute_unique_values(data):
         grouped = data.groupby(data.columns[j])
         value_counts = grouped.size()
         dict[data.columns[j]] = str(value_counts.count())
-        # print(str(value_counts))
-        # print('The total number of unique values is ' + str(value_counts.count()))
-    print(sorted(dict.items()))
+    print(dict.items())
 
 def create_dict_categorical_or_numeric(data):
     print('-----------------------------------------------------------------------------------------------------------')
@@ -33,7 +32,7 @@ def create_dict_categorical_or_numeric(data):
             dict[data.columns[j]] = 'numeric'
         else:
             dict[data.columns[j]] = 'categorical'
-    print(sorted(dict.items()))
+    print(dict.items())
 
 def calculate_and_list_missing_data_percentage(data):
     print('-----------------------------------------------------------------------------------------------------------')
@@ -47,7 +46,7 @@ def calculate_and_list_missing_data_percentage(data):
         missing_data_percentage[data.columns[j]] = count/(data.shape[0] * 1.0)
     print('--------------------------------------------------------------')
     print('The percentage of rows have missing values for each variable: ')
-    print(sorted(missing_data_percentage.items()))
+    print(missing_data_percentage.items())
     print('--------------------------------------------------------------')
 
 def savefig(output_path, fig):
@@ -63,7 +62,7 @@ def gen_missing_data_hist(data, save=True, show=False):
         for j in data.ix[i]:
             if j == '?':
                 missing_data_count[i] += 1
-    print(missing_data_count)
+    # print(missing_data_count)
 
     xbins = [x for x in range(max(missing_data_count) + 1)]
     y = [0] * (max(missing_data_count) + 1)
@@ -99,14 +98,14 @@ def draw_hist(numeric_variables, column_name, bin=0, save=True, show=False):
     else:
         numeric_variables[column_name].hist()
     if save:
-        if bin > 0:
+        if bin >= 100:
             savefig('figure/bigger100/' + column_name + '_hist', fig)
         else:
             savefig('figure/less100/' + column_name + '_hist', fig)
     if show:
         plt.show()
 
-def draw_nonzero_hist(numeric_variables, column_name, save=True, show=False):
+def draw_nonzero_hist(numeric_variables, column_name, bin, save=True, show=False):
     print('-----------------------------------------------------------------------------------------------------------')
     print('Drawing nonzero hist for each numeric variable: ')
     nonzero_column = numeric_variables[numeric_variables[column_name] != 0]
@@ -116,7 +115,7 @@ def draw_nonzero_hist(numeric_variables, column_name, save=True, show=False):
         return
     fig = plt.figure()
     fig.suptitle(column_name)
-    nonzero_column[column_name].hist()
+    nonzero_column[column_name].hist(bins=bin)
     if save:
         savefig('figure/non-zero/' + column_name + '_nonzero_hist', fig)
     if show:
@@ -125,23 +124,43 @@ def draw_nonzero_hist(numeric_variables, column_name, save=True, show=False):
 def subplot(more_salary, less_salary, num_unique_value_per_var, save=True, show=False):
     print('-----------------------------------------------------------------------------------------------------------')
     print('Subplotting for more salary and less salary: ')
+
     for j in range(less_salary.shape[1]):
         column_name = less_salary.columns[j]
-        fig, axarr = plt.subplots(2, sharex=True)
-        axarr[0].set_title(more_salary.columns[j] + '(classes>50K)')
-        axarr[1].set_title(less_salary.columns[j] + '(classes<=50K)')
-        if(num_unique_value_per_var[column_name] < 100):
-            axarr[0].hist(more_salary.ix[:, j])
-            axarr[1].hist(less_salary.ix[:, j])
+        if column_name == 'capital-gain' or column_name == 'capital-loss':
+            more = more_salary[more_salary[column_name] != 0]
+            less = less_salary[less_salary[column_name] != 0]
+            fig, axarr = plt.subplots(2, sharex=True)
+            axarr[0].set_title(more.columns[j] + '(classes>50K)')
+            axarr[1].set_title(less.columns[j] + '(classes<=50K)')
+            # if(num_unique_value_per_var[column_name] < 100):
+            #     axarr[0].hist(more.ix[:, j], num_unique_value_per_var[column_name] - 1)
+            #     axarr[1].hist(less.ix[:, j], num_unique_value_per_var[column_name] - 1)
+            # else:
+            axarr[0].hist(more.ix[:, j], bins=100)
+            axarr[1].hist(less.ix[:, j], bins=100)
+            if save:
+                savefig('figure/subplot/' + column_name + '_subplot', fig)
+                # plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+                # fig.savefig(pp, format='pdf')
+            if show:
+                plt.show()
         else:
-            axarr[0].hist(more_salary.ix[:, j], bins=100)
-            axarr[1].hist(less_salary.ix[:, j], bins=100)
-        if save:
-            savefig('figure/subplot/' + column_name + '_subplot', fig)
-            # plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
-            # fig.savefig(pp, format='pdf')
-        if show:
-            plt.show()
+            fig, axarr = plt.subplots(2, sharex=True)
+            axarr[0].set_title(more_salary.columns[j] + '(classes>50K)')
+            axarr[1].set_title(less_salary.columns[j] + '(classes<=50K)')
+            if(num_unique_value_per_var[column_name] < 100):
+                axarr[0].hist(more_salary.ix[:, j], num_unique_value_per_var[column_name] - 1)
+                axarr[1].hist(less_salary.ix[:, j], num_unique_value_per_var[column_name] - 1)
+            else:
+                axarr[0].hist(more_salary.ix[:, j], bins=100)
+                axarr[1].hist(less_salary.ix[:, j], bins=100)
+            if save:
+                savefig('figure/subplot/' + column_name + '_subplot', fig)
+                # plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+                # fig.savefig(pp, format='pdf')
+            if show:
+                plt.show()
 
 def boxplot(more_salary, less_salary, save=True, show=False):
     print('-----------------------------------------------------------------------------------------------------------')
@@ -149,15 +168,20 @@ def boxplot(more_salary, less_salary, save=True, show=False):
     for j in range(less_salary.shape[1]):
         column_name = less_salary.columns[j]
         fig = plt.figure()
+        boxPlotArray = [more_salary.ix[:, j], less_salary.ix[:, j]]
+        plt.boxplot(boxPlotArray)
+        plt.title('BoxPlot for ' + column_name + ' variable')
+        plt.ylabel(column_name)
+        plt.xticks([1, 2], ['Salary >50K', 'Salary <=50K'])
         # fig, axarr = plt.subplots(2, sharey=True) TODO how to sharey
-        fig, axarr = plt.subplots(2, sharex=True)
-        plt.subplot(1, 2, 1)
-        plt.xlabel(column_name + '(classes>=50K)')
-        # fig.boxplot(more_salary, column=column_name)
-        more_salary.boxplot(column=column_name)
-        plt.subplot(1, 2, 2)
-        plt.xlabel(column_name + '(classes<50K)')
-        less_salary.boxplot(column=column_name)
+        # fig, axarr = plt.subplots(2)
+        # plt.subplot(1, 2, 1)
+        # plt.xlabel(column_name + '(classes>=50K)')
+        # # fig.boxplot(more_salary, column=column_name)
+        # more_salary.boxplot(column=column_name)
+        # plt.subplot(1, 2, 2)
+        # plt.xlabel(column_name + '(classes<50K)')
+        # less_salary.boxplot(column=column_name)
         if save:
             savefig('figure/boxplot/' + column_name + '_boxplot', fig)
         if show:
@@ -165,14 +189,21 @@ def boxplot(more_salary, less_salary, save=True, show=False):
 
 def boxplot_nonzero(more_salary, less_salary, column_name, save=True, show=False):
     fig = plt.figure()
-    plt.subplot(1, 2, 1)
-    plt.xlabel(column_name + '(classes>=50K)')
     more_salary = more_salary[more_salary[column_name] != 0]
-    more_salary.boxplot(column=column_name)
-    plt.subplot(1, 2, 2)
-    plt.xlabel(column_name + '(classes<50K)')
     less_salary = less_salary[less_salary[column_name] != 0]
-    less_salary.boxplot(column=column_name)
+    boxPlotArray = [more_salary[column_name], less_salary[column_name]]
+    plt.boxplot(boxPlotArray)
+    plt.title('BoxPlot for ' + column_name + ' variable')
+    plt.ylabel(column_name)
+    plt.xticks([1, 2], ['Salary >50K', 'Salary <=50K'])
+    # plt.subplot(1, 2, 1)
+    # plt.xlabel(column_name + '(classes>=50K)')
+    # more_salary = more_salary[more_salary[column_name] != 0]
+    # more_salary.boxplot(column=column_name)
+    # plt.subplot(1, 2, 2)
+    # plt.xlabel(column_name + '(classes<50K)')
+    # less_salary = less_salary[less_salary[column_name] != 0]
+    # less_salary.boxplot(column=column_name)
     if save:
         savefig('figure/boxplot/' + column_name + '-non-zero' + '_boxplot', fig)
     if show:
@@ -270,12 +301,18 @@ def check_pairwise_dependency(data, variable1, variable2):
         print(ct)
 
 if __name__ == '__main__':
+    show_in_win = False
+    if len(sys.argv) == 2:
+        show_in_win = sys.argv[0]
     # part 1 import csv data into programming environment
     variable_names = ['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 
                       'occupation', 'relationship', 'race', 'sex', 'capital-gain', 'capital-loss',
                       'hours-per-week', 'native-country', 'salary']
     data = pd.read_csv('adult.data', delimiter=',', skipinitialspace=True, names=variable_names)
-    # print(data)
+
+    # age_vs_hours = [data['capital-gain'], data['capital-loss']]
+    # print(str(np.cov(age_vs_hours)))
+    # print(str(np.corrcoef(age_vs_hours)))
     ''' 1.1 figure out how many unique values there are for each variable '''
     # compute_unique_values(data)
     ''' 1.2 create a vector that indicates which variables are categorical and which are numeric '''
@@ -300,31 +337,30 @@ if __name__ == '__main__':
     '''
     ''' 2. Missing data '''
     ''' 2.1. For each variable calculate and list what percentage of rows have missing values for that variable '''
-    # calculate_and_list_missing_data_percentage(data)
+    calculate_and_list_missing_data_percentage(data)
 
     ''' 2.2. Generate a histogram indicating how many rows have 0, 1, 2, 3, .... missing values '''
-    # gen_missing_data_hist(data, show=True)
-    
+    gen_missing_data_hist(data, show=show_in_win)
+
     ''' 3. Numeric Variables: '''
     numeric_variables = data._get_numeric_data()
-    print(numeric_variables)
     ''' 3.1 list the number of unique values for each variable '''
     num_unique_value_per_var = gen_num_of_unique_values(numeric_variables)
     for k, v in num_unique_value_per_var.items():
         if v < 100:
             ''' 3.2 for variables with less than 100 values, generate a histogram where each bin corresponds to one of
                 the variable values '''
-            draw_hist(numeric_variables, k)
+            draw_hist(numeric_variables, k, v, show=show_in_win)
         else:
             ''' 3.3 for variables with 100 or more values, generate a histogram using 100 bins (your software should be
                 able to automatically figure out where to place the 100 bins) '''
-            draw_hist(numeric_variables, k, 100)
-    
-    ''' 3.4 for the variables capital-gain,capital-loss, since they have a very large fraction of 0 values, just plot histograms
-        of the non-zero values and list what fraction of values of the variable are equal to 0. '''
-    # draw_nonzero_hist(numeric_variables, 'capital-gain')
-    # draw_nonzero_hist(numeric_variables, 'capital-loss')
-    
+            draw_hist(numeric_variables, k, 100, show=show_in_win)
+    #
+    # ''' 3.4 for the variables capital-gain,capital-loss, since they have a very large fraction of 0 values, just plot histograms
+    #     of the non-zero values and list what fraction of values of the variable are equal to 0. '''
+    draw_nonzero_hist(numeric_variables, 'capital-gain', num_unique_value_per_var['capital-gain'], show=show_in_win)
+    draw_nonzero_hist(numeric_variables, 'capital-loss', num_unique_value_per_var['capital-loss'], show=show_in_win)
+
     ''' 3.5 For each variable, now plot 2 histograms as part of the same figure (using the same bins as before), one histogram
         directly above the other and with the same bins for each histogram, where the top histogram is for rows assigned to the
         class >50k, and the lower histogram is for the class <=50k '''
@@ -333,13 +369,13 @@ if __name__ == '__main__':
     less_salary = numeric_variables[numeric_variables['salary'] == '<=50K']
     del more_salary['salary']
     del less_salary['salary']
-    # subplot(more_salary, less_salary, num_unique_value_per_var)
-        
+    subplot(more_salary, less_salary, num_unique_value_per_var, show=show_in_win)
+
     ''' 3.6 For each variable, generate a figure with 2 boxplots, side by side, where the left boxplot is for rows assigned to
         the class >50k, and the right box-plot is for the class <=50k '''
-    # boxplot(more_salary, less_salary)
-    # boxplot_nonzero(more_salary, less_salary, 'capital-gain')
-    # boxplot_nonzero(more_salary, less_salary, 'capital-loss')
+    boxplot(more_salary, less_salary, show=show_in_win)
+    boxplot_nonzero(more_salary, less_salary, 'capital-gain', show=show_in_win)
+    boxplot_nonzero(more_salary, less_salary, 'capital-loss', show=show_in_win)
 
     # 4. Categorial Variables
     categorial_variable = data.drop(numeric_variables.columns, axis=1)
@@ -347,44 +383,60 @@ if __name__ == '__main__':
     # print(categorial_variable)
     ''' 4.1 generate a bar-plot, where the values for each bar correspond to the unique categorical values for each variable.
         Include the "?" symbol (indicating a missing value) as one of the possible values in your bar-plot. '''
-    # barplot_unique_categorical_values(categorial_variable)
-    
+    barplot_unique_categorical_values(categorial_variable, show=show_in_win)
+
     ''' 4.2 For each variable generate 2 barplots in a single figure, one above the other, where the top barplot is for rows
         assigned to the class >50k, and the lower barplot is for rows assigned to the class <=50k '''
-    # more_salary = categorial_variable[categorial_variable['salary'] == '>50K']
-    # less_salary = categorial_variable[categorial_variable['salary'] == '<=50K']
-    # del more_salary['salary']
-    # del less_salary['salary']
-    # barplot_compare_two_classes(more_salary, less_salary)
+    more_salary = categorial_variable[categorial_variable['salary'] == '>50K']
+    less_salary = categorial_variable[categorial_variable['salary'] == '<=50K']
+    del more_salary['salary']
+    del less_salary['salary']
+    barplot_compare_two_classes(more_salary, less_salary, show=show_in_win)
 
     ''' 4.3 Compute the expected information gain (base log2), relative to the class variable '''
     compute_expected_information_gain(data.copy())
 
     # 5. Pairwise dependency on Age
     ''' 5.1. compute the conditional probabilities of a categorial variable '''
-    # compute_conditional_probabilities_for_age(data.copy(), 'education-num')
+    compute_conditional_probabilities_for_age(data.copy(), 'education-num')
 
     ''' 5.2. pick any 2 of the numeric variables and explore whether or not they depend on each other,i.e., are they
         independent or not? if they are dependent, explain how you determined this and what the dependence is. If you
         wish (but this is not necessary) you can discretize the 2 variables you select for this part of the assignment.
     '''
     # variable1: age, variable2: sex
-    # check_pairwise_dependency(data, 'education-num', 'hours-per-week')
+    check_pairwise_dependency(data, 'education-num', 'hours-per-week')
     # variable1: age, variable2: hours-per-week
-    # check_pairwise_dependency(data, 'age', 'hours-per-week')
+    check_pairwise_dependency(data, 'age', 'hours-per-week')
+
+    binned_hours = pd.cut(data['hours-per-week'], 4)
+    data['hours-per-week'] = binned_hours
+    binned_age = pd.cut(data.age, 10)
+    data['binned_age'] = binned_age
+    del data['age']
+    for name, group in data[['binned_age', 'hours-per-week']].groupby(['hours-per-week']):
+        ct = pd.crosstab(group['hours-per-week'], group['binned_age'], margins=True,
+                 rownames=['hours-per-week'], colnames=['binned_age'])
+        columns = group.columns
+        for i in range(5):  # TODO fix
+            ct['P(age = ' + str(ct.columns[i]) + ' | ' + 'hours-per-week' + ' = ' + str(name) + ')'] = np.true_divide(
+                ct[ct.columns[i]], ct['All'])
+        print(ct)
 
     # binned_hours = pd.cut(data['hours-per-week'], 4)
     # data['hours-per-week'] = binned_hours
     # binned_age = pd.cut(data.age, 10)
     # data['binned_age'] = binned_age
     # del data['age']
-    # for name, group in data[['binned_age', 'hours-per-week']].groupby(['hours-per-week']):
-    #     ct = pd.crosstab(group['hours-per-week'], group['binned_age'], margins=True,
-    #              rownames=['hours-per-week'], colnames=['binned_age'])
+    # for name, group in data[['binned_age', 'sex']].groupby(['binned_age']):
+    #     ct = pd.crosstab(group['binned_age'], group['sex'], margins=True,
+    #              rownames=['binned_age'], colnames=['sex'])
     #     columns = group.columns
     #     for i in range(5):  # TODO fix
-    #         ct['P(age = ' + str(ct.columns[i]) + ' | ' + 'hours-per-week' + ' = ' + str(name) + ')'] = np.true_divide(
+    #         ct['P(sex = ' + str(ct.columns[i]) + ' | ' + 'age' + ' = ' + str(name) + ')'] = np.true_divide(
     #             ct[ct.columns[i]], ct['All'])
     #     print(ct)
 
-    pp.close()
+    ''' 5.3 compute the coveriance coeffiency '''
+
+    # pp.close()
