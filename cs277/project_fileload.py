@@ -47,6 +47,17 @@ wholeTestVocabularyFrequency = pickle.load(outputFile)
 wholeVocabularyFrequencyDict = pickle.load(outputFile)
 wholeVocabularyTestFrequencyDict = pickle.load(outputFile)
 
+# A dictionary which keeps number of files in each category
+# Example : {'acq': 115, 'alum': 222 ...}
+numberOfFilesInEachCategoryDict = pickle.load(outputFile)
+numberOfFilesInEachCategoryTestDict = pickle.load(outputFile) 
+
+# A dictionary which keeps fraction of [number of files in each category] / [number of entire files]
+# Example : {'acq':0.015, 'alum':0.031 ...}
+fractionOfFilesInEachCategoryDict = pickle.load(outputFile) 
+fractionOfFilesInEachCategoryTestDict = pickle.load(outputFile) 
+
+
 categoryNum = pickle.load(outputFile)
 fileNum = pickle.load(outputFile)
 
