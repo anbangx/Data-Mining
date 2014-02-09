@@ -88,7 +88,7 @@ for category in categoryList:
 #         continue
 #     if categoryNum == 10:
 #         break
-    
+     
     fileInCategoryList = os.listdir("./dataset/Reuters21578-Apte-115Cat/training/" + category + "/")
     tmpCategoryAlphaNumericStrStemmedDict = {}
     # categoryAlphaNumericStrStemmedDict[categoryNum][0] = category
@@ -129,29 +129,32 @@ for category in categoryList:
         # Create vector space (Dict) for each category
         for words in fileAlphaNumericStrList:
             tmp = stemmer.stem(words)
-            if tmpFileAlphaNumericStrStemmedDict.get(tmp) == None:
+            tmp1 = tmpFileAlphaNumericStrStemmedDict.get(tmp)
+            tmp2 = tmpCategoryAlphaNumericStrStemmedDict.get(tmp)
+            if tmp1 == None:
                 tmpFileAlphaNumericStrStemmedDict[tmp] = 1
             else:
-                tmpFileAlphaNumericStrStemmedDict[tmp] += 1
-            if tmpCategoryAlphaNumericStrStemmedDict.get(tmp) == None:
+                tmpFileAlphaNumericStrStemmedDict[tmp] = tmp1 + 1
+            if tmp2 == None:
                 tmpCategoryAlphaNumericStrStemmedDict[tmp] = 1
             else:
-                tmpCategoryAlphaNumericStrStemmedDict[tmp] += 1
+                tmpCategoryAlphaNumericStrStemmedDict[tmp] = tmp2 + 1
             tmpFreqPerCategory += 1    
             if tmp not in wholeVocabularySet:
                 wholeVocabularySet.add(tmp)
 
-        fileTmpColumn1[str(category)] = tmpFileAlphaNumericStrStemmedDict
+        fileTmpColumn1[category] = tmpFileAlphaNumericStrStemmedDict
         # fileTmpColumn.append(tmpFileAlphaNumericStrStemmedDict)
         # fileTmpColumn[str(fileToTrain)] = fileTmpColumn1 
-        fileAlphaNumericStrStemmedDict[str(fileToTrain)] = fileTmpColumn1
+        fileAlphaNumericStrStemmedDict[fileToTrain] = fileTmpColumn1
         fileNum += 1
         tmpFileNum += 1
         
     # categoryTmpColumn.append(tmpCategoryAlphaNumericStrStemmedDict)
-    categoryAlphaNumericStrStemmedDict[str(category)] = tmpCategoryAlphaNumericStrStemmedDict
+    categoryAlphaNumericStrStemmedDict[category] = tmpCategoryAlphaNumericStrStemmedDict
     categoryNum += 1
     wholeVocabularyFrequency += tmpFreqPerCategory
+    numberOfFilesInEachCategoryDict[category] = tmpFileNum
     
     print "%6.3g"%(time.time() - startTime) + "\t" + "%6.3g"%(time.time() - tmpTime) + "\t" + str(categoryNum) +  "\t" + category + "\t" + str(tmpFileNum) + "\t" + str(len(tmpCategoryAlphaNumericStrStemmedDict)) + "\t" + str(tmpFreqPerCategory)
 
@@ -222,16 +225,17 @@ for categoryTest in categoryTestList:
             if tmp not in wholeTestVocabularySet:
                 wholeTestVocabularySet.add(tmp)
 
-        fileTestTmpColumn[str(categoryTest)] = tmpFileTestAlphaNumericStrStemmedDict
+        fileTestTmpColumn[categoryTest] = tmpFileTestAlphaNumericStrStemmedDict
         # fileTestTmpColumn.append(tmpFileTestAlphaNumericStrStemmedDict)
-        fileTestAlphaNumericStrStemmedDict[str(fileToTest)] = fileTestTmpColumn
+        fileTestAlphaNumericStrStemmedDict[fileToTest] = fileTestTmpColumn
         fileTestNum += 1
         tmpFileTestNum += 1
         
     # categoryTestTmpColumn.append(tmpCategoryTestAlphaNumericStrStemmedDict)
-    categoryTestAlphaNumericStrStemmedDict[str(category)] = tmpCategoryTestAlphaNumericStrStemmedDict
+    categoryTestAlphaNumericStrStemmedDict[categoryTest] = tmpCategoryTestAlphaNumericStrStemmedDict
     categoryTestNum += 1
     wholeTestVocabularyFrequency += tmpFreqPerCategoryTest
+    numberOfFilesInEachCategoryTestDict[categoryTest] = tmpFileTestNum
     
     print "%6.3g"%(time.time() - startTime) + "\t" + "%6.3g"%(time.time() - tmpTime) + "\t" + str(categoryTestNum) +  "\t" + categoryTest + "\t" + str(tmpFileTestNum) + "\t" + str(len(tmpCategoryTestAlphaNumericStrStemmedDict)) + "\t" + str(tmpFreqPerCategoryTest)
 
@@ -291,7 +295,7 @@ for key1, value1 in categoryAlphaNumericStrStemmedDict.iteritems():
         if tmp == None:
             wholeVocabularyFrequencyDict[key] = value
         else:
-            wholeVocabularyFrequencyDict[key] = tmp + value
+            wholeVocabularyFrequencyDict[key] = tmp + 1
 
 # Put frequency of each terms across entire categories
 for key1, value1 in categoryTestAlphaNumericStrStemmedDict.iteritems():
@@ -301,28 +305,32 @@ for key1, value1 in categoryTestAlphaNumericStrStemmedDict.iteritems():
         if tmp == None:
             wholeVocabularyTestFrequencyDict[key] = value
         else:
-            wholeVocabularyTestFrequencyDict[key] = tmp + value
+            wholeVocabularyTestFrequencyDict[key] = tmp + 1
 
+# for key1, value1 in fileAlphaNumericStrStemmedDict.iteritems():
+#     for key,value in value1.iteritems():
+#         print key + ":" + key1
+        
 # Calculate fractionOfFilesInEachCategoryDict
-for key1, value1 in fileAlphaNumericStrStemmedDict.iteritems():
-    for key, value in value1.iteritems():
-        tmp = numberOfFilesInEachCategoryDict.get(key)
-        if tmp == None:
-            numberOfFilesInEachCategoryDict[key] = 1
-        else:
-            numberOfFilesInEachCategoryDict[key] = tmp + 1
+# for key1, value1 in fileAlphaNumericStrStemmedDict.iteritems():
+#     for key, value in value1.iteritems():
+#         tmp = numberOfFilesInEachCategoryDict.get(key)
+#         if tmp == None:
+#             numberOfFilesInEachCategoryDict[key] = 1
+#         else:
+#             numberOfFilesInEachCategoryDict[key] = tmp + 1
 
 for key1, value1 in numberOfFilesInEachCategoryDict.iteritems():
     fractionOfFilesInEachCategoryDict[key1] = value1 / fileNum
 
 # Calculate fractionOfFilesInEachCategoryTestDict
-for key1, value1 in fileTestAlphaNumericStrStemmedDict.iteritems():
-    for key, value in value1.iteritems():
-        tmp = numberOfFilesInEachCategoryTestDict.get(key)
-        if tmp == None:
-            numberOfFilesInEachCategoryTestDict[key] = 1
-        else:
-            numberOfFilesInEachCategoryTestDict[key] = tmp + 1
+# for key1, value1 in fileTestAlphaNumericStrStemmedDict.iteritems():
+#     for key, value in value1.iteritems():
+#         tmp = numberOfFilesInEachCategoryTestDict.get(key)
+#         if tmp == None:
+#             numberOfFilesInEachCategoryTestDict[key] = 1
+#         else:
+#             numberOfFilesInEachCategoryTestDict[key] = tmp + 1
 
 for key1, value1 in numberOfFilesInEachCategoryTestDict.iteritems():
     fractionOfFilesInEachCategoryTestDict[key1] = value1 / fileTestNum
