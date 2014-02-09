@@ -89,6 +89,8 @@ print len(wholeTestVocabularyList)
 print wholeVocabularyFrequency
 print wholeTestVocabularyFrequency
 
+print numberOfFilesInEachCategoryDict['austdlr']
+
 # Define TF-IDF based Cosine Similarity algorithm    
 def tfidfCosineSimilarity(list):
     print "\nTF-IDF Cosine Similarity Algorithm\n"
