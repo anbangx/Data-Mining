@@ -72,6 +72,12 @@ numberOfFilesInEachCategoryTestDict = {}
 fractionOfFilesInEachCategoryDict = {} 
 fractionOfFilesInEachCategoryTestDict = {} 
 
+# [Naive Bayes YEN] dictionary to contain assign category from test set {'acq' :['0012', '0033', '2525'], ...}
+assignedCategoryTest = {}
+assignedCategory = {}
+# to keep frequency of each word in file without information about the category {'0001' :{'hi':1, 'compu:3, 'move':1 ...}, '088' : {'hi':3, 'compu:23, 'move':31 ...}}
+wordFrequencyInFileTest = {}
+wordFrequencyInFile = {}
 
 # Read Training Data Set
 print "\nReading Training data Set"
