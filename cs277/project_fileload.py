@@ -1,11 +1,14 @@
-import os
-import re
-from nltk.corpus import stopwords
-from nltk.stem.porter import *
-import collections
-import numpy
 import time
 import cPickle as pickle
+
+from nltk.stem.porter import *
+import numpy as np
+import pandas as pd
+
+from cs277.DecisionTree.decisiontree import ClassificationTree
+from sklearn import tree
+import pydot
+import StringIO
 
 #
 # Pre-Process Part
@@ -83,13 +86,15 @@ print
 
 # print wholeVocabularyTestFrequencyDict
 
-print len(wholeVocabularyList)
-print len(wholeTestVocabularyList)
+# print len(wholeVocabularyList)
+# print len(wholeTestVocabularyList)
+#
+# print wholeVocabularyFrequency
+# print wholeTestVocabularyFrequency
+#
+# print numberOfFilesInEachCategoryDict['austdlr']
 
-print wholeVocabularyFrequency
-print wholeTestVocabularyFrequency
-
-print numberOfFilesInEachCategoryDict['austdlr']
+print termFrequencyPerCategoryList
 
 # Define TF-IDF based Cosine Similarity algorithm    
 def tfidfCosineSimilarity(list):
@@ -99,10 +104,57 @@ def tfidfCosineSimilarity(list):
 def tfidfCosineSimilarityDetail(list):
     print "\nTF-IDF Cosine Similarity Algorithm\n"
 
-# Define Decision Tree algorithm. 
-def decisionTree(list):
+# Define Decision Tree algorithm.
+def decisionTree(list, use_sklearn_lib=False):
     print "\nDecision Tree Algorithm\n"
-    
+    if use_sklearn_lib:
+        decisionTree_sklearn(list)
+    else:
+        decisionTree_own_version(list)
+
+def decisionTree_sklearn(list, criterion='entropy', max_depth=4):
+    print "\nUsing sklearn library.... \n"
+    print list
+    X = []
+    Y = []
+    for row in list:
+        X.append(row[1:])
+        Y.append(row[0])
+
+    clf = tree.DecisionTreeClassifier(criterion=criterion, max_depth=max_depth)
+    print X
+    print Y
+    clf = clf.fit(X, Y)
+
+    dot_data = StringIO.StringIO()
+    tree.export_graphviz(clf, out_file=dot_data)
+    graph = pydot.graph_from_dot_data(dot_data.getvalue())
+    graph.write_pdf("DecisionTree.pdf")
+
+def decisionTree_own_version(list, num_categories=5, num_features=8000, min_node_size=4, max_node_depth=10):
+    list = np.array(list)
+    list = list[:num_categories]
+    list = list[:, 0:num_features]
+    print list
+
+    columns = []
+    for i in range(len(list[0]) - 1):
+        print str(i)
+        columns.append(str(i))
+    columns.insert(0, "category")
+    df = pd.DataFrame(list, columns=columns)
+
+    g = ClassificationTree()
+    parameters = dict()
+    parameters['min_node_size'] = min_node_size
+    parameters['max_node_depth'] = max_node_depth
+    parameters['threshold'] = 0
+    parameters['response'] = 'category'
+    parameters['alpha'] = 0
+    parameters['metric_kind'] = 'Entropy'
+    g.train(data=df, parameters=parameters)
+    g.plot()
+
 # Define Decision Tree Algorithm in detail
 def decisionTreeDetail(list):
     print "\nDecision Tree Algorithm\n"

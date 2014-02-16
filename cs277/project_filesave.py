@@ -28,8 +28,8 @@ categoryTestNum = 0
 outputFile = open('pre_processed_data_object', 'wb')
 
 # File Fraction size to Read. Set between 0.1 and 1
-fileFractionSize = 1
-fileTestFractionSize = 1
+fileFractionSize = 0.1
+fileTestFractionSize = 0.1
 
 # Define Regular Expression to pre-process strings. Only AlphaNumeric and whitespace will be kept.
 strPattern = re.compile('[^a-zA-Z0-9 ]')
@@ -95,7 +95,7 @@ for category in categoryList:
     # categoryTmpColumn = {}
     # categoryTmpColumn.append(str(category))
     tmpFileNum = 0
-    tmpFreqPerCategory= 0
+    tmpFreqPerCategory = 0
     tmpNumberOfUniqueTermPerCategory = 0
     tmpNumberOfTermPerCategory = 0
     
@@ -275,17 +275,23 @@ print "# of Frequency:\t" + str(wholeVocabularyFrequency)
 #    bop         8              9         1 
 termFrequencyPerCategoryList = []
 
-# Creating A two dimensional List which keeps frequency of term per category
+# Creating A two dimensional List which keeps frequency of term per category\
+i = 0
 for key,value in categoryAlphaNumericStrStemmedDict.iteritems():
+    # if i > 5:
+    #     break
     tmpColumn = []
     tmpColumn.append(key)
     for term in wholeVocabularyList:
+        # if len(tmpColumn) > 50:
+        #     break
         tmp = value.get(term)
         if tmp == None:
             tmpColumn.append(0)
         else:
             tmpColumn.append(tmp)
     termFrequencyPerCategoryList.append(tmpColumn)
+    i = i + 1
 
 # Put frequency of each terms across entire categories
 for key1, value1 in categoryAlphaNumericStrStemmedDict.iteritems():
@@ -358,7 +364,7 @@ pickle.dump(categoryTestNum, outputFile, -1)
 pickle.dump(fileTestNum, outputFile, -1)
 pickle.dump(termFrequencyPerCategoryList, outputFile, -1)
 
-# print termFrequencyPerCategoryList
+print termFrequencyPerCategoryList
 
 print 
 
