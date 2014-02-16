@@ -276,10 +276,7 @@ print "# of Frequency:\t" + str(wholeVocabularyFrequency)
 termFrequencyPerCategoryList = []
 
 # Creating A two dimensional List which keeps frequency of term per category\
-i = 0
 for key,value in categoryAlphaNumericStrStemmedDict.iteritems():
-    # if i > 5:
-    #     break
     tmpColumn = []
     tmpColumn.append(key)
     for term in wholeVocabularyList:
@@ -291,7 +288,6 @@ for key,value in categoryAlphaNumericStrStemmedDict.iteritems():
         else:
             tmpColumn.append(tmp)
     termFrequencyPerCategoryList.append(tmpColumn)
-    i = i + 1
 
 # Put frequency of each terms across entire categories
 for key1, value1 in categoryAlphaNumericStrStemmedDict.iteritems():
