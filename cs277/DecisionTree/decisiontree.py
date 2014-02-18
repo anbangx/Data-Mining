@@ -4,9 +4,87 @@ import graphs as tig
 import igraph as ig
 from math import log
 
-class DecisionNode(tig.BasicNode, object):
+# class DecisionNode(tig.BasicNode, object):
+#     def __init__(self, **kwargs):
+#         super(DecisionNode, self).__init__(**kwargs)
+#         self.left = None
+#         self.right = None
+#         self.children = None
+#         self.parent = None
+#         self.prediction = None
+#         self.predicted_class = None
+#         self.tally = {}
+#         self.total = 0.0
+#         self.size = 0
+#         self.depth = 0
+#         self.local_data = None
+#         self.error = None
+#
+#     def local_filter(self, data): #filters data
+#         pass
+#
+#     def get_next_node(self, datapoint):
+#         pass
+
+# class DecisionTree(tig.return_nary_tree_class(directed=True), object):
+#     def __init__(self, Vertex=DecisionNode, **kwargs):
+#         super(DecisionTree, self).__init__(N=2, Vertex=Vertex, **kwargs)
+#         self.data = None
+#         self.data_size = 0
+#         self.response = '' #data attribute we're trying to predict
+#         self.metric_kind = ''
+#
+#     def split_vertex(self, vertex):
+#         super(DecisionTree, self).split_vertex(vertex)
+#         vertex.left = vertex.children[0]
+#         vertex.left.depth = vertex.depth+1
+#         vertex.right = vertex.children[1]
+#         vertex.right.depth = vertex.depth+1
+#
+#     def fuse_vertex(self, vertex):
+#         super(DecisionTree, self).fuse_vertex(vertex)
+#         vertex.left, vertex.right = None, None
+#
+#     def node_purity(self, node):
+#         if node.children is None:
+#             return self.metric(node.local_data, kind=self.metric_kind)
+#         else:
+#             left_raw_purity = self.node_purity(node=node.left)
+#             right_raw_purity = self.node_purity(node=node.right)
+#             left_size = float(node.left.size)
+#             right_size = float(node.right.size)
+#             left_purity = (left_size/node.size)*left_raw_purity
+#             right_purity = (right_size/node.size)*right_raw_purity
+#             return left_purity+right_purity
+#
+#     def Gini(self, prob_vector):
+#         return sum(p*(1-p) for p in prob_vector)
+#
+#     def Entropy(self, prob_vector):
+#         def entropy_summand(p):
+#             if p == 0:
+#                 return 0
+#             else:
+#
+#                 return -p*log(p,2)
+#         return sum(entropy_summand(p) for p in prob_vector)
+#
+#     def metric(self, filtered_data, kind):
+#         prob_vector = self.get_prob_vector(filtered_data)
+#         if kind == 'Entropy':
+#             return self.Entropy(prob_vector)
+#         elif kind == 'Gini':
+#             return self.Entropy(prob_vector)
+#
+#     def get_prob_vector(self, data):
+#         size = float(len(data))
+#         value_count = data[self.response].value_counts()
+#         prob_vector = [value_count[key]/size for key in value_count.keys()]
+#         return prob_vector
+
+class PivotDecisionNode(tig.BasicNode, object):
     def __init__(self, **kwargs):
-        super(DecisionNode, self).__init__(**kwargs)
+        super(PivotDecisionNode, self).__init__(**kwargs)
         self.left = None
         self.right = None
         self.children = None
@@ -17,78 +95,9 @@ class DecisionNode(tig.BasicNode, object):
         self.total = 0.0
         self.size = 0
         self.depth = 0
-        self.local_data = None
-        self.error = None
-        
-    def local_filter(self, data): #filters data
-        pass
-
-    def get_next_node(self, datapoint): 
-        pass
-
-class DecisionTree(tig.return_nary_tree_class(directed=True), object):
-    def __init__(self, Vertex=DecisionNode, **kwargs):
-        super(DecisionTree, self).__init__(N=2, Vertex=Vertex, **kwargs)
-        self.data = None
-        self.data_size = 0
-        self.response = '' #data attribute we're trying to predict
-        self.metric_kind = ''
-
-    def split_vertex(self, vertex):
-        super(DecisionTree, self).split_vertex(vertex)
-        vertex.left = vertex.children[0]
-        vertex.left.depth = vertex.depth+1
-        vertex.right = vertex.children[1]
-        vertex.right.depth = vertex.depth+1
-
-    def fuse_vertex(self, vertex):
-        super(DecisionTree, self).fuse_vertex(vertex)
-        vertex.left, vertex.right = None, None
-        
-    def node_purity(self, node):
-        if node.children is None:
-            return self.metric(node.local_data, kind=self.metric_kind)
-        else:
-            left_raw_purity = self.node_purity(node=node.left)
-            right_raw_purity = self.node_purity(node=node.right)
-            left_size = float(node.left.size)
-            right_size = float(node.right.size)
-            left_purity = (left_size/node.size)*left_raw_purity
-            right_purity = (right_size/node.size)*right_raw_purity
-            return left_purity+right_purity
-        
-    def Gini(self, prob_vector):
-        return sum(p*(1-p) for p in prob_vector)
-    
-    def Entropy(self, prob_vector):
-        def entropy_summand(p):
-            if p == 0:
-                return 0
-            else:
-                
-                return -p*log(p,2)
-        return sum(entropy_summand(p) for p in prob_vector)
-        
-    def metric(self, filtered_data, kind):
-        prob_vector = self.get_prob_vector(filtered_data)
-        if kind == 'Entropy':
-            return self.Entropy(prob_vector)
-        elif kind == 'Gini':
-            return self.Entropy(prob_vector)
-                
-    def get_prob_vector(self, data):
-        size = float(len(data))
-        value_count = data[self.response].value_counts()
-        prob_vector = [value_count[key]/size for key in value_count.keys()]
-        return prob_vector
-
-class PivotDecisionNode(DecisionNode, object):
-    def __init__(self, **kwargs):
-        super(PivotDecisionNode, self).__init__(**kwargs)
         self.pivot = None
         self.split_attribute = None
-        
-        
+
     def local_filter(self, data):
         if self.parent is None:
             self.size = len(data)
@@ -113,23 +122,68 @@ class PivotDecisionNode(DecisionNode, object):
             else:
                 return self.right.get_data_leaf(datapoint)
         
-class PivotDecisionTree(DecisionTree, object):
+class PivotDecisionTree(tig.return_nary_tree_class(directed=True), object):
     # def __init__(self, data, metric_kind, max_node_depth, Vertex=PivotDecisionNode, **kwargs):
     def __init__(self, Vertex=PivotDecisionNode, **kwargs):
-        super(PivotDecisionTree, self).__init__(Vertex=Vertex, **kwargs)
+        super(PivotDecisionTree, self).__init__(N=2, Vertex=Vertex, **kwargs)
         #these are default, can be set by train
+        self.data = None
+        self.data_size = 0
+        self.response = '' #data attribute we're trying to predict
+        self.metric_kind = ''
         self.min_node_size = 0
         self.max_node_depth = 5 # max_node_depth;
         self.threshold = 0
         # self.data = data
         # self.metric_kind = metric_kind
 
+    def node_purity(self, node):
+        if node.children is None:
+            return self.metric(node.local_data, kind=self.metric_kind)
+        else:
+            left_raw_purity = self.node_purity(node=node.left)
+            right_raw_purity = self.node_purity(node=node.right)
+            left_size = float(node.left.size)
+            right_size = float(node.right.size)
+            left_purity = (left_size/node.size)*left_raw_purity
+            right_purity = (right_size/node.size)*right_raw_purity
+            return left_purity+right_purity
+
+    def Gini(self, prob_vector):
+        return sum(p*(1-p) for p in prob_vector)
+
+    def Entropy(self, prob_vector):
+        def entropy_summand(p):
+            if p == 0:
+                return 0
+            else:
+
+                return -p*log(p,2)
+        return sum(entropy_summand(p) for p in prob_vector)
+
+    def metric(self, filtered_data, kind):
+        prob_vector = self.get_prob_vector(filtered_data)
+        if kind == 'Entropy':
+            return self.Entropy(prob_vector)
+        elif kind == 'Gini':
+            return self.Entropy(prob_vector)
+
+    def get_prob_vector(self, data):
+        size = float(len(data))
+        value_count = data[self.response].value_counts()
+        prob_vector = [value_count[key]/size for key in value_count.keys()]
+        return prob_vector
+
+
     def split_vertex(self, vertex, split_attribute, pivot):
-        super(PivotDecisionTree, self).split_vertex(vertex)
+        vertex.left = vertex.children[0]
+        vertex.left.depth = vertex.depth+1
+        vertex.right = vertex.children[1]
+        vertex.right.depth = vertex.depth+1
         vertex.pivot, vertex.split_attribute = pivot, split_attribute
         
     def fuse_vertex(self, vertex):
-        super(PivotDecisionTree, self).fuse_vertex(vertex)
+        vertex.left, vertex.right = None, None
         vertex.pivot, vertex.split_attribute = None, None
 
     def grow_tree(self):
@@ -154,7 +208,7 @@ class PivotDecisionTree(DecisionTree, object):
             self.split_vertex(node, split_attribute=best_split[1],
                               pivot=best_split[2])
             for child in node.children:
-                child.local_data=child.local_filter(data=node.local_data)
+                child.local_data = child.local_filter(data=node.local_data)
                 self.grow_node(node=child)
             
     def get_best_split(self, node):
@@ -204,6 +258,19 @@ class PivotDecisionTree(DecisionTree, object):
         else:
             return False
 
+    def predict(self, data_point, class_probs=False):
+        return self.vertices[0].get_data_leaf(data_point).prediction
+        
+    def test(self, data):
+        self.load_new_data(data)
+        return self.error(new_data=True)
+
+class ClassificationTree(PivotDecisionTree, object):
+    def __init__(self, **kwargs):
+        super(ClassificationTree, self).__init__(**kwargs)
+        #these are default, can be set by train
+        self.metric_kind = 'Entropy'
+
     def train(self, data, parameters, prune=False):
         self.vertices = []
         self.edges = set([])
@@ -218,19 +285,6 @@ class PivotDecisionTree(DecisionTree, object):
         self.grow_tree()
         if prune:
             self.prune_tree(alpha)
-
-    def predict(self, data_point, class_probs=False):
-        return self.vertices[0].get_data_leaf(data_point).prediction
-        
-    def test(self, data):
-        self.load_new_data(data)
-        return self.error(new_data=True)
-
-class ClassificationTree(PivotDecisionTree, object):
-    def __init__(self, **kwargs):
-        super(ClassificationTree, self).__init__(**kwargs)
-        #these are default, can be set by train
-        self.metric_kind = 'Entropy'
 
     def set_node_prediction(self, node):
         node.prediction = node.local_data[self.response].value_counts()

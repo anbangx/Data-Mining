@@ -148,8 +148,20 @@ def decisionTree_sklearn(trainning_dict, testing_dict, criterion='entropy', max_
         graph = pydot.graph_from_dot_data(dot_data.getvalue())
         graph.write_pdf("DecisionTree.pdf")
 
-def decisionTree_own_version(list, num_categories=5, num_features=1000, min_node_size=2, max_node_depth=10):
-    list = np.array(list)
+def dict_to_list(dict):
+    list = []
+    for k, v in dict.items():
+        v.insert(0, k)
+        list.append(v)
+    return list
+
+def decisionTree_own_version(trainning_dict, num_categories=5, num_features=1000, min_node_size=2, max_node_depth=10):
+    trainning_dict = {}
+    list1 = [1, 2, 3, 4, 5]
+    list2 = [5, 2, 3, 1, 4]
+    trainning_dict['c1'] = list1
+    trainning_dict['c2'] = list2
+    list = np.array(dict_to_list(trainning_dict))
     list = list[:num_categories]
     list = list[:, 0:num_features]
     print list

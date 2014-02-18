@@ -308,7 +308,7 @@ if __name__ == '__main__':
     variable_names = ['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 
                       'occupation', 'relationship', 'race', 'sex', 'capital-gain', 'capital-loss',
                       'hours-per-week', 'native-country', 'salary']
-    data = pd.read_csv('adult.data', delimiter=',', skipinitialspace=True, names=variable_names)
+    global_data = pd.read_csv('adult.data', delimiter=',', skipinitialspace=True, names=variable_names)
 
     # age_vs_hours = [data['capital-gain'], data['capital-loss']]
     # print(str(np.cov(age_vs_hours)))
@@ -316,7 +316,7 @@ if __name__ == '__main__':
     ''' 1.1 figure out how many unique values there are for each variable '''
     # compute_unique_values(data)
     ''' 1.2 create a vector that indicates which variables are categorical and which are numeric '''
-    create_dict_categorical_or_numeric(data)
+    create_dict_categorical_or_numeric(global_data)
 
     # part 2 Exploratory Data Analysis
     ''' 1. Variable Definitions
@@ -337,13 +337,13 @@ if __name__ == '__main__':
     '''
     ''' 2. Missing data '''
     ''' 2.1. For each variable calculate and list what percentage of rows have missing values for that variable '''
-    calculate_and_list_missing_data_percentage(data)
+    calculate_and_list_missing_data_percentage(global_data)
 
     ''' 2.2. Generate a histogram indicating how many rows have 0, 1, 2, 3, .... missing values '''
-    gen_missing_data_hist(data, show=show_in_win)
+    gen_missing_data_hist(global_data, show=show_in_win)
 
     ''' 3. Numeric Variables: '''
-    numeric_variables = data._get_numeric_data()
+    numeric_variables = global_data._get_numeric_data()
     ''' 3.1 list the number of unique values for each variable '''
     num_unique_value_per_var = gen_num_of_unique_values(numeric_variables)
     for k, v in num_unique_value_per_var.items():
@@ -364,7 +364,7 @@ if __name__ == '__main__':
     ''' 3.5 For each variable, now plot 2 histograms as part of the same figure (using the same bins as before), one histogram
         directly above the other and with the same bins for each histogram, where the top histogram is for rows assigned to the
         class >50k, and the lower histogram is for the class <=50k '''
-    numeric_variables['salary'] = data['salary']
+    numeric_variables['salary'] = global_data['salary']
     more_salary = numeric_variables[numeric_variables['salary'] == '>50K']
     less_salary = numeric_variables[numeric_variables['salary'] == '<=50K']
     del more_salary['salary']
@@ -378,8 +378,8 @@ if __name__ == '__main__':
     boxplot_nonzero(more_salary, less_salary, 'capital-loss', show=show_in_win)
 
     # 4. Categorial Variables
-    categorial_variable = data.drop(numeric_variables.columns, axis=1)
-    categorial_variable['salary'] = data['salary']
+    categorial_variable = global_data.drop(numeric_variables.columns, axis=1)
+    categorial_variable['salary'] = global_data['salary']
     # print(categorial_variable)
     ''' 4.1 generate a bar-plot, where the values for each bar correspond to the unique categorical values for each variable.
         Include the "?" symbol (indicating a missing value) as one of the possible values in your bar-plot. '''
@@ -394,27 +394,27 @@ if __name__ == '__main__':
     barplot_compare_two_classes(more_salary, less_salary, show=show_in_win)
 
     ''' 4.3 Compute the expected information gain (base log2), relative to the class variable '''
-    compute_expected_information_gain(data.copy())
+    compute_expected_information_gain(global_data.copy())
 
     # 5. Pairwise dependency on Age
     ''' 5.1. compute the conditional probabilities of a categorial variable '''
-    compute_conditional_probabilities_for_age(data.copy(), 'education-num')
+    compute_conditional_probabilities_for_age(global_data.copy(), 'education-num')
 
     ''' 5.2. pick any 2 of the numeric variables and explore whether or not they depend on each other,i.e., are they
         independent or not? if they are dependent, explain how you determined this and what the dependence is. If you
         wish (but this is not necessary) you can discretize the 2 variables you select for this part of the assignment.
     '''
     # variable1: age, variable2: sex
-    check_pairwise_dependency(data, 'education-num', 'hours-per-week')
+    check_pairwise_dependency(global_data, 'education-num', 'hours-per-week')
     # variable1: age, variable2: hours-per-week
-    check_pairwise_dependency(data, 'age', 'hours-per-week')
+    check_pairwise_dependency(global_data, 'age', 'hours-per-week')
 
-    binned_hours = pd.cut(data['hours-per-week'], 4)
-    data['hours-per-week'] = binned_hours
-    binned_age = pd.cut(data.age, 10)
-    data['binned_age'] = binned_age
-    del data['age']
-    for name, group in data[['binned_age', 'hours-per-week']].groupby(['hours-per-week']):
+    binned_hours = pd.cut(global_data['hours-per-week'], 4)
+    global_data['hours-per-week'] = binned_hours
+    binned_age = pd.cut(global_data.age, 10)
+    global_data['binned_age'] = binned_age
+    del global_data['age']
+    for name, group in global_data[['binned_age', 'hours-per-week']].groupby(['hours-per-week']):
         ct = pd.crosstab(group['hours-per-week'], group['binned_age'], margins=True,
                  rownames=['hours-per-week'], colnames=['binned_age'])
         columns = group.columns
