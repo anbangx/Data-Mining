@@ -105,31 +105,48 @@ def tfidfCosineSimilarityDetail(list):
     print "\nTF-IDF Cosine Similarity Algorithm\n"
 
 # Define Decision Tree algorithm.
-def decisionTree(list, use_sklearn_lib=False):
+def decisionTree(training_dict, testing_dict, use_sklearn_lib=True):
     print "\nDecision Tree Algorithm\n"
     if use_sklearn_lib:
-        decisionTree_sklearn(list)
+        decisionTree_sklearn(training_dict, testing_dict)
     else:
-        decisionTree_own_version(list)
+        decisionTree_own_version(training_dict)
 
-def decisionTree_sklearn(list, criterion='entropy', max_depth=4):
+def decisionTree_sklearn(trainning_dict, testing_dict, criterion='entropy', max_depth=10, draw=False):
     print "\nUsing sklearn library.... \n"
-    print list
-    X = []
-    Y = []
-    for row in list:
-        X.append(row[1:])
-        Y.append(row[0])
+    print trainning_dict
+    # Example : {'000056' : {'acq' : {'hi':1, 'compu:3, 'move':1 ...}}}
+    X_train = []
+    Y_train = []
+    for termFreq_per_category in trainning_dict.values():
+        for category, termFreq in termFreq_per_category.items():
+            X_train.append(termFreq)
+            Y_train.append(category)
+
+    X_test = []
+    Y_test = []
+    for termFreq_per_category in testing_dict.values():
+        for category, termFreq in termFreq_per_category.items():
+            X_test.append(termFreq)
+            Y_test.append(category)
 
     clf = tree.DecisionTreeClassifier(criterion=criterion, max_depth=max_depth)
-    print X
-    print Y
-    clf = clf.fit(X, Y)
+    clf = clf.fit(X_train, Y_train)
+    # predict and compute correct rate
+    correct = 0
+    for i in range(len(X_test)):
+        predict = clf.predict(X_test[i])
+        print predict
+        if predict == Y_test[i]:
+            correct += 1
+    correct_rate = correct / len(X_test)
+    print correct_rate
 
-    dot_data = StringIO.StringIO()
-    tree.export_graphviz(clf, out_file=dot_data)
-    graph = pydot.graph_from_dot_data(dot_data.getvalue())
-    graph.write_pdf("DecisionTree.pdf")
+    if draw:
+        dot_data = StringIO.StringIO()
+        tree.export_graphviz(clf, out_file=dot_data)
+        graph = pydot.graph_from_dot_data(dot_data.getvalue())
+        graph.write_pdf("DecisionTree.pdf")
 
 def decisionTree_own_version(list, num_categories=5, num_features=8000, min_node_size=4, max_node_depth=10):
     list = np.array(list)
@@ -171,7 +188,7 @@ def naiveBayesDetail(list):
 tfidfCosineSimilarity(termFrequencyPerCategoryList)
 
 # Execute Decision Tree algorithm
-decisionTree(termFrequencyPerCategoryList)
+decisionTree(fileAlphaNumericStrStemmedDict, fileTestAlphaNumericStrStemmedDict)
 
 # Execute NaiveBayes algorithm
 naiveBayes(termFrequencyPerCategoryList)
