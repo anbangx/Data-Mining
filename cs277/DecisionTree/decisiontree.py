@@ -219,7 +219,7 @@ class PivotDecisionTree(DecisionTree, object):
         if prune:
             self.prune_tree(alpha)
 
-    def predict(self,data_point, class_probs=False):
+    def predict(self, data_point, class_probs=False):
         return self.vertices[0].get_data_leaf(data_point).prediction
         
     def test(self, data):
