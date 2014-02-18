@@ -39,6 +39,23 @@ fileTestAlphaNumericStrStemmedDict = pickle.load(outputFile)
 # {'000056' : ('acq', 'alum')}
 fileTestBelongCategory = pickle.load(outputFile)
 
+# print fileTestBelongCategory
+
+# For entire vocabularies in the training set, create a dictionary that a list (value) which contains frequency per category (key)
+# Orders of vocabularies are same for every list. The order is as same as that of in wholeVocabularyFromTrainingAndTestSetList.
+# Example : { 'category' : '[frequency for 'said', frequency for 'mln' ...]', 'category' : '[frequency for 'said', frequency for 'mln' ...]'  
+
+# normalizedFrequencyPerCategoryInTrainingSetDict = pickle.load(outputFile)
+
+# For entire vocabularies in the test set, create a dictionary that a list (value) which contains frequency per file (key)
+# Orders of vocabularies are same for every list. The order is as same as that of in wholeVocabularyFromTrainingAndTestSetList.
+# Example : { '0001268' : '[frequency for 'said', frequency for 'mln' ...]', 'category' : '[frequency for 'said', frequency for 'mln' ...]'   
+
+# normalizedFrequencyPerTestFileDict = pickle.load(outputFile)
+
+# Entire Vocubulary List which include every terms from the training set and test set.
+# wholeVocabularyFromTrainingAndTestSetList = pickle.load(outputFile)
+
 # A list which keeps whole vocabularies throughout whole categories. It will be sorted.
 # Example : ['current', 'curtail', 'custom', 'cut', 'cuurent', 'cvg', 'cwt', 'cypru', 'cyrpu', 'd', 'daili' ...]
 wholeVocabularyList = pickle.load(outputFile)
@@ -81,10 +98,13 @@ termFrequencyPerCategoryList = pickle.load(outputFile)
 
 print "Object loading finished. Elapsed Time: " + str(time.time() - startTime)
 print
-# print categoryNum
-# print fileNum
-# print categoryTestNum
-# print fileTestNum
+print categoryNum
+print fileNum
+print categoryTestNum
+print fileTestNum
+
+# print len(fileTestAlphaNumericStrStemmedDict)
+
 # print wholeVocabularyTestFrequencyDict
 
 # print len(wholeVocabularyList)
@@ -226,7 +246,7 @@ def tfidfCosineSimilarity(list):
                 
         fileTestCosineDistancePerCategory[key] = tmpCosineDistancePerCategory
         count = count + 1
-#        print count
+#         print count
                 
             # print "File " + key + " calculation finished."
 #             if key == '0011326':

@@ -348,8 +348,73 @@ for key1, value1 in numberOfFilesInEachCategoryDict.iteritems():
 
 for key1, value1 in numberOfFilesInEachCategoryTestDict.iteritems():
     fractionOfFilesInEachCategoryTestDict[key1] = value1 / fileTestNum
-    
-           
+
+# Entire Vocubulary List which include every terms from the training set and test set.
+# wholeVocabularyFromTrainingAndTestSetList = []
+wholeVocabularyFromTrainingAndTestSetList = list(set(wholeVocabularyList) | set(wholeTestVocabularyList))
+print len(wholeVocabularyFromTrainingAndTestSetList)
+
+# # For entire vocabularies in the training set, create a dictionary that a list (value) which contains frequency per category (key)
+# # Orders of vocabularies are same for every list. The order is as same as that of in wholeVocabularyFromTrainingAndTestSetList.
+# # Example : { 'category' : '[frequency for 'said', frequency for 'mln' ...]', 'category' : '[frequency for 'said', frequency for 'mln' ...]'     
+# normalizedFrequencyPerCategoryInTrainingSetDict = {}
+#      
+# # key : category, value : {term : frequency, term : frequency ...}}
+# for key, value in categoryAlphaNumericStrStemmedDict.iteritems():
+#  
+#     tmpList = []
+#     tmpSum = 0
+#      
+#     for term in wholeVocabularyFromTrainingAndTestSetList:
+#  
+#         if term in value:
+#             tmp = value[term]
+#             tmpList.append(tmp)
+#             tmpSum += tmp
+#         else:
+#             tmpList.append(0)
+#      
+#     for i in range(0,len(tmpList)):
+#         if float(tmpSum) == 0:
+#             tmpList[i] = 0
+#         else:
+#             tmpList[i] = float(tmpList[i]) / float(tmpSum)
+#  
+#      
+#     normalizedFrequencyPerCategoryInTrainingSetDict[key] = tmpList 
+#  
+#           
+# # For entire vocabularies in the test set, create a dictionary that a list (value) which contains frequency per file (key)
+# # Orders of vocabularies are same for every list. The order is as same as that of in wholeVocabularyFromTrainingAndTestSetList.
+# # Example : { '0001268' : '[frequency for 'said', frequency for 'mln' ...]', 'category' : '[frequency for 'said', frequency for 'mln' ...]'     
+# normalizedFrequencyPerTestFileDict = {}
+#  
+# # key : file, value : {category : {term : frequency, term : frequency ...}})
+# for key, value in fileTestAlphaNumericStrStemmedDict.iteritems():
+#  
+#     #key1 : category, value1 : {term : frequency ...}
+#     for key1, value1 in value.iteritems():
+#         tmpList = []
+#         tmpSum = 0      
+#  
+#         for term in wholeVocabularyFromTrainingAndTestSetList:
+#      
+#             if term in value1:
+#                 tmp = value1[term]
+#                 tmpList.append(tmp)
+#                 tmpSum += tmp
+#             else:
+#                 tmpList.append(0)
+#          
+#         for i in range(0,len(tmpList)):
+#             if float(tmpSum) == 0:
+#                 tmpList[i] = 0
+#             else:
+#                 tmpList[i] = float(tmpList[i]) / float(tmpSum)
+#      
+#     normalizedFrequencyPerTestFileDict[key] = tmpList             
+
+               
 pickle.dump(fileFractionSize, outputFile, -1)
 pickle.dump(fileTestFractionSize, outputFile, -1)
 pickle.dump(categoryAlphaNumericStrStemmedDict, outputFile, -1)
@@ -357,6 +422,9 @@ pickle.dump(categoryTestAlphaNumericStrStemmedDict, outputFile, -1)
 pickle.dump(fileAlphaNumericStrStemmedDict, outputFile, -1)
 pickle.dump(fileTestAlphaNumericStrStemmedDict, outputFile, -1)
 pickle.dump(fileTestBelongCategory, outputFile, -1)
+# pickle.dump(normalizedFrequencyPerCategoryInTrainingSetDict, outputFile, -1)
+# pickle.dump(normalizedFrequencyPerTestFileDict, outputFile, -1)
+# pickle.dump(wholeVocabularyFromTrainingAndTestSetList, outputFile, -1)
 pickle.dump(wholeVocabularyList, outputFile, -1)
 pickle.dump(wholeTestVocabularyList, outputFile, -1)
 pickle.dump(wholeVocabularyFrequency, outputFile, -1)
