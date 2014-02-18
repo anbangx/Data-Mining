@@ -25,11 +25,11 @@ print list
 
 columns = []
 for i in range(len(list[0]) - 1):
-    print str(i)
-    columns.append(str(i))
+    columns.append('w' + str(i + 1))
 columns.insert(0, "category")
 df = pd.DataFrame(list, columns=columns)
-
+print '-------'
+print df['w1']
 global_data = df
 
 class PivotDecisionNode():
@@ -41,8 +41,10 @@ class PivotDecisionNode():
         self.children = None
         self.parent = None
         self.depth = 0
-        self.pivot = None
         self.split_attribute = None
+        self.pivot = None
+        self.prediction = None
+        self.prediction_class = None
 
     def local_filter(self, data):
         if self.parent is None:
@@ -58,6 +60,16 @@ class PivotDecisionNode():
             ret = data[~ret]
         self.size = len(ret)
         return ret
+
+    def get_data_leaf(self, datapoint):
+        if self.children is None:
+            return self
+        else:
+            print datapoint[self.split_attribute]
+            if datapoint[self.split_attribute][0] <= self.pivot:
+                return self.left.get_data_leaf(datapoint)
+            else:
+                return self.right.get_data_leaf(datapoint)
 
 class PivotDecisionTree():
     def __init__(self):
@@ -91,6 +103,10 @@ class PivotDecisionTree():
         node.size = float(node.size)
         node.prediction = {key: node.prediction[key]/node.size for key in node.prediction.keys()}
 
+        key, value = max(node.prediction.iteritems(), key=lambda x: x[1])
+        node.predicted_class = key
+        node.predicted_prob = value
+
     def grow_node(self, node):
         if node.parent is None:
             global global_data
@@ -103,6 +119,7 @@ class PivotDecisionTree():
 
             except StopIteration:
                 return
+            self.fuse_vertex(node)
             self.split_vertex(node, split_attribute=best_split[1],
                               pivot=best_split[2])
             for child in node.children:
@@ -162,7 +179,10 @@ class PivotDecisionTree():
         vertex.pivot, vertex.split_attribute = pivot, split_attribute
 
     def fuse_vertex(self, vertex):
-        self.nodes.remove(vertex.children)
+        if vertex.children is None:
+            return
+        for child in vertex.children:
+            self.nodes.remove(child)
         vertex.children = None
         vertex.left, vertex.right = None, None
         vertex.pivot, vertex.split_attribute = None, None
@@ -179,6 +199,13 @@ class PivotDecisionTree():
             right_purity = (right_size/node.size)*right_raw_purity
             return left_purity+right_purity
 
+    def metric(self, filtered_data, kind):
+        prob_vector = self.get_prob_vector(filtered_data)
+        if kind == 'Entropy':
+            return self.Entropy(prob_vector)
+        elif kind == 'Gini':
+            return self.Entropy(prob_vector)
+
     def Gini(self, prob_vector):
         return sum(p*(1-p) for p in prob_vector)
 
@@ -190,13 +217,6 @@ class PivotDecisionTree():
 
                 return -p*log(p,2)
         return sum(entropy_summand(p) for p in prob_vector)
-
-    def metric(self, filtered_data, kind):
-        prob_vector = self.get_prob_vector(filtered_data)
-        if kind == 'Entropy':
-            return self.Entropy(prob_vector)
-        elif kind == 'Gini':
-            return self.Entropy(prob_vector)
 
     def get_prob_vector(self, data):
         size = float(len(data))
@@ -216,15 +236,11 @@ class ClassificationTree(PivotDecisionTree):
         self.min_node_size = parameters['min_node_size']
         self.grow_tree()
 
-    def set_node_prediction(self, node):
-        node.prediction = node.local_data[self.response].value_counts()
-        node.size = sum(node.prediction[key] for key in node.prediction.keys())
-        node.size = float(node.size)
-        node.prediction = {key: node.prediction[key]/node.size for key in node.prediction.keys()}
-
-        key, value = max(node.prediction.iteritems(), key=lambda x: x[1])
-        node.predicted_class = key
-        node.predicted_prob = value
+    def predict(self, data_point, class_probs=False):
+        if class_probs:
+            return self.root.get_data_leaf(data_point).prediction
+        else:
+            return self.root.get_data_leaf(data_point).predicted_class
 
 g = ClassificationTree()
 parameters = dict()
@@ -233,3 +249,12 @@ parameters['metric_kind'] = 'Entropy'
 parameters['min_node_size'] = 1
 parameters['max_node_depth'] = 5
 g.train(parameters=parameters)
+
+
+list1 = [1, 5, 3, 1, 4]
+list = [list1, list2]
+columns = ['w1', 'w2', 'w3', 'w4', 'w5']
+# print columns
+datapoint = pd.DataFrame(np.array([list1]), columns=columns)
+predict = g.predict(datapoint)
+print 'The prediction of ' + str(list1) + ' is ' + predict
