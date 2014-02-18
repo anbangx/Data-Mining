@@ -105,7 +105,7 @@ def tfidfCosineSimilarityDetail(list):
     print "\nTF-IDF Cosine Similarity Algorithm\n"
 
 # Define Decision Tree algorithm.
-def decisionTree(training_dict, testing_dict, use_sklearn_lib=True):
+def decisionTree(training_dict, testing_dict, use_sklearn_lib=False):
     print "\nDecision Tree Algorithm\n"
     if use_sklearn_lib:
         decisionTree_sklearn(training_dict, testing_dict)
@@ -148,7 +148,7 @@ def decisionTree_sklearn(trainning_dict, testing_dict, criterion='entropy', max_
         graph = pydot.graph_from_dot_data(dot_data.getvalue())
         graph.write_pdf("DecisionTree.pdf")
 
-def decisionTree_own_version(list, num_categories=5, num_features=8000, min_node_size=4, max_node_depth=10):
+def decisionTree_own_version(list, num_categories=5, num_features=1000, min_node_size=2, max_node_depth=10):
     list = np.array(list)
     list = list[:num_categories]
     list = list[:, 0:num_features]
@@ -188,7 +188,7 @@ def naiveBayesDetail(list):
 tfidfCosineSimilarity(termFrequencyPerCategoryList)
 
 # Execute Decision Tree algorithm
-decisionTree(fileAlphaNumericStrStemmedDict, fileTestAlphaNumericStrStemmedDict)
+decisionTree(termFrequencyPerCategoryList, fileTestAlphaNumericStrStemmedDict)
 
 # Execute NaiveBayes algorithm
 naiveBayes(termFrequencyPerCategoryList)
