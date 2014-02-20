@@ -3,6 +3,7 @@ __author__ = 'anbangx'
 from math import log
 import numpy as np
 import pandas as pd
+import Queue
 
 def dict_to_list(dict):
     list = []
@@ -11,26 +12,37 @@ def dict_to_list(dict):
         list.append(v)
     return list
 
-trainning_dict = {}
-list1 = [1, 5, 3, 1, 4]
-list2 = [1, 7, 3, 1, 4]
-list3 = [3, 5, 3, 1, 4]
-list4 = [3, 7, 3, 1, 4]
-trainning_dict['c1'] = list1
-trainning_dict['c2'] = list2
-trainning_dict['c3'] = list3
-trainning_dict['c4'] = list4
-list = np.array(dict_to_list(trainning_dict))
-print list
-
-columns = []
-for i in range(len(list[0]) - 1):
-    columns.append('w' + str(i + 1))
-columns.insert(0, "category")
-df = pd.DataFrame(list, columns=columns)
-print '-------'
-print df['w1']
-global_data = df
+# trainning_dict = {}
+# list1 = [1, 5, 3, 1, 4]
+# list2 = [1, 7, 3, 1, 4]
+# list3 = [3, 5, 3, 1, 4]
+# list4 = [3, 7, 3, 1, 4]
+# list5 = [3, 8, 3, 1, 4]
+# list6 = [3, 8, 3, 1, 7]
+# list7 = [3, 8, 3, 1, 7]
+#
+# trainning_dict['c1'] = list1
+# trainning_dict['c2'] = list2
+# trainning_dict['c3'] = list3
+# trainning_dict['c4'] = list4
+# trainning_dict['c5'] = list5
+# list = dict_to_list(trainning_dict)
+# list.append(['c4', 3, 7, 3, 1, 4])
+# list = np.array(list)
+# print list
+# #
+# columns = []
+# for i in range(len(list[0]) - 1):
+#     columns.append('w' + str(i + 1))
+# columns.insert(0, "category")
+# df = pd.DataFrame(list, columns=columns)
+# print '-------'
+# print df['w1']
+# global_data = df
+global_data = ''
+def set_global_data(data):
+    global global_data
+    global_data = data
 
 class PivotDecisionNode():
     def __init__(self):
@@ -98,14 +110,15 @@ class PivotDecisionTree():
             self.set_node_prediction(node)
 
     def set_node_prediction(self, node):
-        node.prediction = node.local_data[self.response].value_counts()
-        node.size = sum(node.prediction[key] for key in node.prediction.keys())
-        node.size = float(node.size)
-        node.prediction = {key: node.prediction[key]/node.size for key in node.prediction.keys()}
+        if node.local_data is not None:
+            node.prediction = node.local_data[self.response].value_counts()
+            node.size = sum(node.prediction[key] for key in node.prediction.keys())
+            node.size = float(node.size)
+            node.prediction = {key: node.prediction[key]/node.size for key in node.prediction.keys()}
 
-        key, value = max(node.prediction.iteritems(), key=lambda x: x[1])
-        node.predicted_class = key
-        node.predicted_prob = value
+            key, value = max(node.prediction.iteritems(), key=lambda x: x[1])
+            node.predicted_class = key
+            node.predicted_prob = value
 
     def grow_node(self, node):
         if node.parent is None:
@@ -122,9 +135,14 @@ class PivotDecisionTree():
             self.fuse_vertex(node)
             self.split_vertex(node, split_attribute=best_split[1],
                               pivot=best_split[2])
-            for child in node.children:
-                child.local_data = child.local_filter(data=node.local_data)
-                self.grow_node(node=child)
+            node.left.local_data = node.left.local_filter(data=node.local_data)
+            node.right.local_data = node.right.local_filter(data=node.local_data)
+            node.children[0] = node.left
+            node.children[1] = node.right
+            del node.local_data
+            node.local_data = None
+            self.grow_node(node=node.left)
+            self.grow_node(node=node.right)
 
     def get_best_split(self, node):
         gen = self.iter_split_eval(node)
@@ -140,9 +158,15 @@ class PivotDecisionTree():
             if node.children is None:
                 pass
             else:
-                for child in node.children:
-                    child.local_data = child.local_filter(node.local_data)
+                node.left.local_data = node.left.local_filter(data=node.local_data)
+                node.right.local_data = node.right.local_filter(data=node.local_data)
                 ret = [self.node_purity(node), node.split_attribute, node.pivot]
+                node.left.local_data = None
+                node.right.local_data = None
+                del node.children
+                node.left = None
+                node.right = None
+                node.children = None
                 yield ret
 
     def iter_split(self, node):
@@ -242,19 +266,44 @@ class ClassificationTree(PivotDecisionTree):
         else:
             return self.root.get_data_leaf(data_point).predicted_class
 
-g = ClassificationTree()
-parameters = dict()
-parameters['response'] = 'category'
-parameters['metric_kind'] = 'Entropy'
-parameters['min_node_size'] = 1
-parameters['max_node_depth'] = 5
-g.train(parameters=parameters)
+    def plot(self):
+        f = open('../myfile', 'w')
 
+        q = Queue.Queue()
+        q.put(self.root)
+        while not q.empty():
+            cur_node = q.get()
+            f.write(self.seriablize(cur_node) + '\n')
+            if cur_node.left != None:
+                q.put(cur_node.left)
+            if cur_node.right != None:
+                q.put(cur_node.right)
+        f.close()
 
-list1 = [1, 5, 3, 1, 4]
-list = [list1, list2]
-columns = ['w1', 'w2', 'w3', 'w4', 'w5']
-# print columns
-datapoint = pd.DataFrame(np.array([list1]), columns=columns)
-predict = g.predict(datapoint)
-print 'The prediction of ' + str(list1) + ' is ' + predict
+    def seriablize(self, node):
+        s = ''
+        s += 'depth:' + str(node.depth) + ' '
+        if node.split_attribute is not None:
+            s += 'split_attribute: ' + str(node.split_attribute) + ' '
+        if node.pivot is not None:
+            s += 'frequence_pivot: ' + str(node.pivot) + ' '
+        if node.prediction is not None:
+            s += 'prediction: ' + str(node.prediction)
+        # if node.left is None and node.right is None: # if leaf, print prob
+        return s
+
+# g = ClassificationTree()
+# parameters = dict()
+# parameters['response'] = 'category'
+# parameters['metric_kind'] = 'Entropy'
+# parameters['min_node_size'] = 1
+# parameters['max_node_depth'] = 5
+# g.train(parameters=parameters)
+# g.plot()
+# #
+# list1 = [1, 5, 3, 1, 4]
+# columns = ['w1', 'w2', 'w3', 'w4', 'w5']
+# # print columns
+# datapoint = pd.DataFrame(np.array([list1]), columns=columns)
+# predict = g.predict(datapoint)
+# print 'The prediction of ' + str(list1) + ' is ' + predict
