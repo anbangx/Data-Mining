@@ -3,11 +3,11 @@ import re
 from nltk.corpus import stopwords
 from nltk.stem.porter import *
 import collections
-import numpy as np
 import time
 import cPickle as pickle
 import copy
 import math
+import numpy as np
 import pandas as pd
 import cs277.DecisionTree.DT as DT
 from sklearn import tree
@@ -43,6 +43,7 @@ fileTestAlphaNumericStrStemmedDict = pickle.load(outputFile)
 
 # A dictionary which keeps test filename, and its categories in Set
 # {'000056' : ('acq', 'alum')}
+fileBelongCategory = pickle.load(outputFile)
 fileTestBelongCategory = pickle.load(outputFile)
 
 # print fileTestBelongCategory
@@ -50,15 +51,16 @@ fileTestBelongCategory = pickle.load(outputFile)
 # For entire vocabularies in the training set, create a dictionary that a list (value) which contains frequency per category (key)
 # Orders of vocabularies are same for every list. The order is as same as that of in wholeVocabularyFromTrainingAndTestSetList.
 # Example : { 'category' : '[frequency for 'said', frequency for 'mln' ...]', 'category' : '[frequency for 'said', frequency for 'mln' ...]'  
-normalizedFrequencyPerCategoryInTrainingSetDict = pickle.load(outputFile)
+# normalizedFrequencyPerCategoryInTrainingSetDict = pickle.load(outputFile)
 
-def return_normalizedDict():
-    return normalizedFrequencyPerCategoryInTrainingSetDict
+frequencyInFilePerCategoryInTrainingSetList = pickle.load(outputFile)
+frequencyInFilePerCategoryInTestSetList = pickle.load(outputFile)
 
 # For entire vocabularies in the test set, create a dictionary that a list (value) which contains frequency per file (key)
 # Orders of vocabularies are same for every list. The order is as same as that of in wholeVocabularyFromTrainingAndTestSetList.
 # Example : { '0001268' : '[frequency for 'said', frequency for 'mln' ...]', 'category' : '[frequency for 'said', frequency for 'mln' ...]'   
-normalizedFrequencyPerTestFileDict = pickle.load(outputFile)
+
+# normalizedFrequencyPerTestFileDict = pickle.load(outputFile)
 
 # Entire Vocubulary List which include every terms from the training set and test set.
 wholeVocabularyFromTrainingAndTestSetList = pickle.load(outputFile)
@@ -218,7 +220,9 @@ def tfidfCosineSimilarity(list):
             
             for key2, value2 in value1.iteritems():
                 tmp = float(value2) / float(tmpTotalCountPerCategory)
-                tmpNormalizedFrequencyPerCategory[key2] = tmp
+                if key2 in wholeVocabularyIDFDict:
+                    tmp = tmp * wholeVocabularyIDFDict[key2]
+                tmpNormalizedFrequencyPerCategory[key2] = tmp 
                 tmpTFIDFDistance += tmp * tmp
                 
             for key2, value2 in value1.iteritems():
@@ -294,35 +298,35 @@ def tfidfCosineSimilarityDetail():
     
     
 # Define Decision Tree algorithm.
-def decisionTree(training_dict, testing_dict, file_category, words_name, use_sklearn_lib=True):
+def decisionTree(training_list, testing_list, words_name, use_sklearn_lib=False):
     print "\nDecision Tree Algorithm\n"
     if use_sklearn_lib:
-        decisionTree_sklearn(training_dict, testing_dict, file_category)
+        decisionTree_sklearn(training_list, testing_list)
     else:
-        decisionTree_own_version(training_dict, testing_dict, file_category, words_name)
+        decisionTree_own_version(training_list, testing_list, words_name, num_trainning_file=len(training_list), num_features=len(training_list[0]) - 1)
 
-def decisionTree_sklearn(trainning_dict, testing_dict, file_category, criterion='gini', max_depth=100, draw=False):
+def decisionTree_sklearn(trainning_list, testing_list, criterion='gini', max_depth=100, draw=False):
     print "\nUsing sklearn library.... \n"
-    # print trainning_dict
-    X_train = []
-    Y_train = []
-    for category, termFreq_per_category in trainning_dict.items():
-            X_train.append(termFreq_per_category)
-            Y_train.append(category)
+    start_time = time.time()
+    # trainning_list = trainning_list[:1]
+    num_features = len(trainning_list[0])-1
+    X_train = [row[0:num_features - 1] for row in trainning_list] #row[0:num_features - 1]
+    Y_train = [row[-1] for row in trainning_list]
 
-    clf = tree.DecisionTreeClassifier(criterion=criterion, max_depth=max_depth)
+    clf = tree.DecisionTreeClassifier(criterion=criterion)  # , max_depth=max_depth
     clf = clf.fit(X_train, Y_train)
 
     # predict and compute correct rate
     num_correct = 0
-    total = len(testing_dict)
-    for file, termFreq_per_file in testing_dict.items():
-        predict = clf.predict(termFreq_per_file)
-        if predict in file_category.get(file):
+    total = len(testing_list)
+    for file in testing_list:
+        predict = clf.predict(file[0:num_features - 1])
+        if predict == file[-1]:
             num_correct += 1
-    print 'The number of correct prediction is :' + str(num_correct) + ' and the total number is ' + str(total)
+    print 'The number of correct prediction is: ' + str(num_correct) + ' and the total number is: ' + str(total)
     print 'The correctness is ' + str(float(num_correct)/total)
 
+    print "Finished sklearn decision tree. Elapsed Time: " + str(time.time() - start_time)
 
     if draw:
         dot_data = StringIO.StringIO()
@@ -337,15 +341,17 @@ def dict_to_list(dict):
         list.append(v)
     return list
 
-def decisionTree_own_version(trainning_dict, testing_dict, file_category, words_name, num_categories=115, num_features=12212, min_node_size=1, max_node_depth=100):
-    # max_categories: 115, max_features: 12212
-    trainning_list = np.array(dict_to_list(trainning_dict))
-    trainning_list = trainning_list[:num_categories]
-    trainning_list = trainning_list[:, 0:num_features + 1]
-    # print list
-
+def decisionTree_own_version(trainning_list, testing_list, words_name, num_trainning_file=100, num_features=2000, min_node_size=1, max_node_depth=100):
+    print "\nUsing own version decision tree.... \n"
+    start_time = time.time()
+    trainning_list = trainning_list[:num_trainning_file]
+    trainning_features = [row[0:num_features] for row in trainning_list]
+    trainning_prediction_class = [row[-1] for row in trainning_list]
+    for i in range(len(trainning_features) - 1):
+        trainning_features[i].append(trainning_prediction_class[i]) # including prediction_class
+    trainning_list = trainning_features
     words_name = words_name[0:num_features]
-    words_name.insert(0, "category")
+    words_name.append("category")
     df = pd.DataFrame(trainning_list, columns=words_name)
 
     g = DT.ClassificationTree()
@@ -358,17 +364,23 @@ def decisionTree_own_version(trainning_dict, testing_dict, file_category, words_
     g.train(parameters=parameters)
     g.plot()
 
-    # make prediction
+    # predict and compute correct rate
+    words_name = words_name[0:num_features]
     num_correct = 0
-    total = len(testing_dict)
-    words_name = words_name[1:]
-    for file, term in testing_dict.items():
-        datapoint = pd.DataFrame(np.array([term[:num_features]]), columns=words_name)
+    total = len(testing_list)
+    for file in testing_list:
+        datapoint = pd.DataFrame(np.array([file[:num_features]]), columns=words_name)
         predict = g.predict(datapoint)
-        if predict in file_category.get(file):
+        if predict == file[-1]:
             num_correct += 1
-    print 'The number of correct prediction is :' + str(num_correct)
+    print 'The number of correct prediction is: ' + str(num_correct) + ' and the total number is: ' + str(total)
     print 'The correctness is ' + str(float(num_correct)/total)
+
+    print "Finished sklearn decision tree. Elapsed Time: " + str(time.time() - start_time)
+
+# Define Decision Tree Algorithm in detail
+def decisionTreeDetail(list):
+    print "\nDecision Tree Algorithm\n"
 
 # Define Naive Bayes algorithm
 def naiveBayes(list):
@@ -379,12 +391,11 @@ def naiveBayesDetail(list):
     print "\nNaive Bayes Algorithm\n"
 
 # Execute TF-IDF based Cosine Similarity algorithm    
-# tfidfCosineSimilarity(termFrequencyPerCategoryList)2
+# tfidfCosineSimilarity(termFrequencyPerCategoryList)
 
-# if '2' or 'k' or 'four' in wholeVocabularyFromTrainingAndTestSetList:
-#     print "here"
 # Execute Decision Tree algorithm
-decisionTree(normalizedFrequencyPerCategoryInTrainingSetDict, normalizedFrequencyPerTestFileDict, fileTestBelongCategory, wholeVocabularyFromTrainingAndTestSetList)
+# Execute Decision Tree algorithm
+decisionTree(frequencyInFilePerCategoryInTrainingSetList, frequencyInFilePerCategoryInTestSetList, wholeVocabularyFromTrainingAndTestSetList)
 
 # Execute NaiveBayes algorithm
 naiveBayes(termFrequencyPerCategoryList)

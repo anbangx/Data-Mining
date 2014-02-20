@@ -56,7 +56,7 @@ class PivotDecisionNode():
         self.split_attribute = None
         self.pivot = None
         self.prediction = None
-        self.prediction_class = None
+        self.predicted_class = None
 
     def local_filter(self, data):
         if self.parent is None:
@@ -77,7 +77,7 @@ class PivotDecisionNode():
         if self.children is None:
             return self
         else:
-            print datapoint[self.split_attribute]
+            # print datapoint[self.split_attribute]
             if datapoint[self.split_attribute][0] <= self.pivot:
                 return self.left.get_data_leaf(datapoint)
             else:
@@ -110,7 +110,7 @@ class PivotDecisionTree():
             self.set_node_prediction(node)
 
     def set_node_prediction(self, node):
-        if node.local_data is not None:
+        if node.local_data is not None and len(node.local_data) != 0:
             node.prediction = node.local_data[self.response].value_counts()
             node.size = sum(node.prediction[key] for key in node.prediction.keys())
             node.size = float(node.size)

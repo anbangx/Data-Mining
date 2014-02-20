@@ -28,8 +28,8 @@ categoryTestNum = 0
 outputFile = open('pre_processed_data_object', 'wb')
 
 # File Fraction size to Read. Set between 0.1 and 1
-fileFractionSize = 1
-fileTestFractionSize = 1
+fileFractionSize = 0.1
+fileTestFractionSize = 0.1
 
 # Define Regular Expression to pre-process strings. Only AlphaNumeric and whitespace will be kept.
 strPattern = re.compile('[^a-zA-Z0-9 ]')
@@ -50,6 +50,7 @@ fileTestAlphaNumericStrStemmedDict = {}
 # A dictionary which keeps test filename, and its categories in Set
 # {'000056' : ('acq', 'alum')}
 fileTestBelongCategory = {}
+fileBelongCategory = {}
 
 # A list which keeps whole vocabularies throughout whole categories. It will be sorted.
 # Example : ['current', 'curtail', 'custom', 'cut', 'cuurent', 'cvg', 'cwt', 'cypru', 'cyrpu', 'd', 'daili' ...]
@@ -150,10 +151,17 @@ for category in categoryList:
         fileTmpColumn1[category] = tmpFileAlphaNumericStrStemmedDict
         # fileTmpColumn.append(tmpFileAlphaNumericStrStemmedDict)
         # fileTmpColumn[str(fileToTrain)] = fileTmpColumn1 
-        fileAlphaNumericStrStemmedDict[fileToTrain] = fileTmpColumn1
         fileNum += 1
         tmpFileNum += 1
-        
+        if fileToTrain in fileAlphaNumericStrStemmedDict:
+            fileBelongCategory[fileToTrain].append(category)
+        else:
+            tmp = []
+            tmp.append(category)
+            fileBelongCategory[fileToTrain] = tmp
+
+        fileAlphaNumericStrStemmedDict[fileToTrain] = fileTmpColumn1
+                    
     # categoryTmpColumn.append(tmpCategoryAlphaNumericStrStemmedDict)
     categoryAlphaNumericStrStemmedDict[category] = tmpCategoryAlphaNumericStrStemmedDict
     categoryNum += 1
@@ -233,12 +241,12 @@ for categoryTest in categoryTestList:
         # fileTestTmpColumn.append(tmpFileTestAlphaNumericStrStemmedDict)
         if fileToTest in fileTestAlphaNumericStrStemmedDict:
             fileTestBelongCategory[fileToTest].append(categoryTest)
-            fileTestAlphaNumericStrStemmedDict[fileToTest] = fileTestTmpColumn
         else:
-            fileTestAlphaNumericStrStemmedDict[fileToTest] = fileTestTmpColumn
             tmp = []
             tmp.append(categoryTest)
             fileTestBelongCategory[fileToTest] = tmp
+
+        fileTestAlphaNumericStrStemmedDict[fileToTest] = fileTestTmpColumn
             
         fileTestNum += 1
         tmpFileTestNum += 1
@@ -352,67 +360,94 @@ for key1, value1 in numberOfFilesInEachCategoryTestDict.iteritems():
 # Entire Vocubulary List which include every terms from the training set and test set.
 # wholeVocabularyFromTrainingAndTestSetList = []
 wholeVocabularyFromTrainingAndTestSetList = list(set(wholeVocabularyList) | set(wholeTestVocabularyList))
-print len(wholeVocabularyFromTrainingAndTestSetList)
 
 # For entire vocabularies in the training set, create a dictionary that a list (value) which contains frequency per category (key)
 # Orders of vocabularies are same for every list. The order is as same as that of in wholeVocabularyFromTrainingAndTestSetList.
 # Example : { 'category' : '[frequency for 'said', frequency for 'mln' ...]', 'category' : '[frequency for 'said', frequency for 'mln' ...]'     
 normalizedFrequencyPerCategoryInTrainingSetDict = {}
-    
-# key : category, value : {term : frequency, term : frequency ...}}
-for key, value in categoryAlphaNumericStrStemmedDict.iteritems():
+frequencyInFilePerCategoryInTrainingSetList = []
+frequencyInFilePerCategoryInTestSetList = []
 
+# key = filename, value : {category : {term:frequency ...}}
+for key,value in fileAlphaNumericStrStemmedDict.iteritems():
+    
     tmpList = []
-    tmpSum = 0
     
-    for term in wholeVocabularyFromTrainingAndTestSetList:
-
-        if term in value:
-            tmp = value[term]
-            tmpList.append(tmp)
-            tmpSum += tmp
-        else:
-            tmpList.append(0)
-    
-    for i in range(0,len(tmpList)):
-        if float(tmpSum) == 0:
-            tmpList[i] = 0
-        else:
-            tmpList[i] = float(tmpList[i]) / float(tmpSum)
-
-    
-    normalizedFrequencyPerCategoryInTrainingSetDict[key] = tmpList 
-
-         
-# For entire vocabularies in the test set, create a dictionary that a list (value) which contains frequency per file (key)
-# Orders of vocabularies are same for every list. The order is as same as that of in wholeVocabularyFromTrainingAndTestSetList.
-# Example : { '0001268' : '[frequency for 'said', frequency for 'mln' ...]', 'category' : '[frequency for 'said', frequency for 'mln' ...]'     
-normalizedFrequencyPerTestFileDict = {}
-
-# key : file, value : {category : {term : frequency, term : frequency ...}})
-for key, value in fileTestAlphaNumericStrStemmedDict.iteritems():
-
-    #key1 : category, value1 : {term : frequency ...}
+    # key1 = category, value1 : {term:frequency... }
     for key1, value1 in value.iteritems():
-        tmpList = []
-        tmpSum = 0      
-
+        
         for term in wholeVocabularyFromTrainingAndTestSetList:
-    
+            
             if term in value1:
-                tmp = value1[term]
-                tmpList.append(tmp)
-                tmpSum += tmp
+                tmpList.append(value1[term])
             else:
                 tmpList.append(0)
         
-        for i in range(0,len(tmpList)):
-            if float(tmpSum) == 0:
-                tmpList[i] = 0
-            else:
-                tmpList[i] = float(tmpList[i]) / float(tmpSum)
+        for idx in fileBelongCategory[key]:
+            tmpList1 = tmpList
+            tmpList1.append(idx)
+            
+            frequencyInFilePerCategoryInTrainingSetList.append(tmpList1)
+
+# key = filename, value : {category : {term:frequency ...}}
+for key,value in fileTestAlphaNumericStrStemmedDict.iteritems():
     
-    normalizedFrequencyPerTestFileDict[key] = tmpList             
+    tmpList = []
+    
+    # key1 = category, value1 : {term:frequency... }
+    for key1, value1 in value.iteritems():
+        
+        for term in wholeVocabularyFromTrainingAndTestSetList:
+            
+            if term in value1:
+                tmpList.append(value1[term])
+            else:
+                tmpList.append(0)
+        
+        for idx in fileTestBelongCategory[key]:
+            tmpList1 = tmpList
+            tmpList1.append(idx)
+            
+            frequencyInFilePerCategoryInTestSetList.append(tmpList1)
+
+        
+      
+# # key : category, value : {term : frequency, term : frequency ...}}
+# for key, value in categoryAlphaNumericStrStemmedDict.iteritems():
+#   
+#     tmpList = []
+#       
+#     for term in wholeVocabularyFromTrainingAndTestSetList:
+#   
+#         if term in value:
+#             tmpList.append(value[term])
+#         else:
+#             tmpList.append(0)
+#       
+#     normalizedFrequencyPerCategoryInTrainingSetDict[key] = tmpList 
+#   
+#            
+# # For entire vocabularies in the test set, create a dictionary that a list (value) which contains frequency per file (key)
+# # Orders of vocabularies are same for every list. The order is as same as that of in wholeVocabularyFromTrainingAndTestSetList.
+# # Example : { '0001268' : '[frequency for 'said', frequency for 'mln' ...]', 'category' : '[frequency for 'said', frequency for 'mln' ...]'     
+# normalizedFrequencyPerTestFileDict = {}
+#   
+# # key : file, value : {category : {term : frequency, term : frequency ...}})
+# for key, value in fileTestAlphaNumericStrStemmedDict.iteritems():
+#   
+#     #key1 : category, value1 : {term : frequency ...}
+#     for key1, value1 in value.iteritems():
+#         tmpList = []
+#   
+#         for term in wholeVocabularyFromTrainingAndTestSetList:
+#       
+#             if term in value1:
+#                 tmpList.append(value1[term])
+#             else:
+#                 tmpList.append(0)
+#       
+#     normalizedFrequencyPerTestFileDict[key] = tmpList             
+
                
 pickle.dump(fileFractionSize, outputFile, -1)
 pickle.dump(fileTestFractionSize, outputFile, -1)
@@ -420,9 +455,12 @@ pickle.dump(categoryAlphaNumericStrStemmedDict, outputFile, -1)
 pickle.dump(categoryTestAlphaNumericStrStemmedDict, outputFile, -1)
 pickle.dump(fileAlphaNumericStrStemmedDict, outputFile, -1)
 pickle.dump(fileTestAlphaNumericStrStemmedDict, outputFile, -1)
+pickle.dump(fileBelongCategory, outputFile, -1)
 pickle.dump(fileTestBelongCategory, outputFile, -1)
-pickle.dump(normalizedFrequencyPerCategoryInTrainingSetDict, outputFile, -1)
-pickle.dump(normalizedFrequencyPerTestFileDict, outputFile, -1)
+# pickle.dump(normalizedFrequencyPerCategoryInTrainingSetDict, outputFile, -1)
+# pickle.dump(normalizedFrequencyPerTestFileDict, outputFile, -1)
+pickle.dump(frequencyInFilePerCategoryInTrainingSetList, outputFile, -1)
+pickle.dump(frequencyInFilePerCategoryInTestSetList, outputFile, -1)
 pickle.dump(wholeVocabularyFromTrainingAndTestSetList, outputFile, -1)
 pickle.dump(wholeVocabularyList, outputFile, -1)
 pickle.dump(wholeTestVocabularyList, outputFile, -1)
