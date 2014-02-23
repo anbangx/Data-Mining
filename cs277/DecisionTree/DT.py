@@ -1,44 +1,14 @@
 __author__ = 'anbangx'
 
 from math import log
-import numpy as np
-import pandas as pd
 import Queue
+from sklearn import tree
+import pandas as pd
+import numpy as np
+import time
+import pydot
+import StringIO
 
-def dict_to_list(dict):
-    list = []
-    for k, v in dict.items():
-        v.insert(0, k)
-        list.append(v)
-    return list
-
-# trainning_dict = {}
-# list1 = [1, 5, 3, 1, 4]
-# list2 = [1, 7, 3, 1, 4]
-# list3 = [3, 5, 3, 1, 4]
-# list4 = [3, 7, 3, 1, 4]
-# list5 = [3, 8, 3, 1, 4]
-# list6 = [3, 8, 3, 1, 7]
-# list7 = [3, 8, 3, 1, 7]
-#
-# trainning_dict['c1'] = list1
-# trainning_dict['c2'] = list2
-# trainning_dict['c3'] = list3
-# trainning_dict['c4'] = list4
-# trainning_dict['c5'] = list5
-# list = dict_to_list(trainning_dict)
-# list.append(['c4', 3, 7, 3, 1, 4])
-# list = np.array(list)
-# print list
-# #
-# columns = []
-# for i in range(len(list[0]) - 1):
-#     columns.append('w' + str(i + 1))
-# columns.insert(0, "category")
-# df = pd.DataFrame(list, columns=columns)
-# print '-------'
-# print df['w1']
-# global_data = df
 global_data = ''
 def set_global_data(data):
     global global_data
@@ -292,18 +262,131 @@ class ClassificationTree(PivotDecisionTree):
         # if node.left is None and node.right is None: # if leaf, print prob
         return s
 
-# g = ClassificationTree()
-# parameters = dict()
-# parameters['response'] = 'category'
-# parameters['metric_kind'] = 'Entropy'
-# parameters['min_node_size'] = 1
-# parameters['max_node_depth'] = 5
-# g.train(parameters=parameters)
-# g.plot()
-# #
-# list1 = [1, 5, 3, 1, 4]
-# columns = ['w1', 'w2', 'w3', 'w4', 'w5']
-# # print columns
-# datapoint = pd.DataFrame(np.array([list1]), columns=columns)
-# predict = g.predict(datapoint)
-# print 'The prediction of ' + str(list1) + ' is ' + predict
+def dict_to_list(dict):
+    list = []
+    for k, v in dict.items():
+        v.insert(0, k)
+        list.append(v)
+    return list
+
+debug = False
+if debug:
+    trainning_dict = {}
+    list1 = [1, 5, 3, 1, 4]
+    list2 = [1, 7, 3, 1, 4]
+    list3 = [3, 5, 3, 1, 4]
+    list4 = [3, 7, 3, 1, 4]
+    list5 = [3, 8, 3, 1, 4]
+    list6 = [3, 8, 3, 1, 7]
+    list7 = [3, 8, 3, 1, 7]
+
+    trainning_dict['c1'] = list1
+    trainning_dict['c2'] = list2
+    trainning_dict['c3'] = list3
+    trainning_dict['c4'] = list4
+    trainning_dict['c5'] = list5
+    list = dict_to_list(trainning_dict)
+    list.append(['c4', 3, 7, 3, 1, 4])
+    list = np.array(list)
+    print list
+    #
+    columns = []
+    for i in range(len(list[0]) - 1):
+        columns.append('w' + str(i + 1))
+        columns.insert(0, "category")
+    df = pd.DataFrame(list, columns=columns)
+    print '-------'
+    print df['w1']
+    global_data = df
+    g = ClassificationTree()
+    parameters = dict()
+    parameters['response'] = 'category'
+    parameters['metric_kind'] = 'Entropy'
+    parameters['min_node_size'] = 1
+    parameters['max_node_depth'] = 5
+    g.train(parameters=parameters)
+    g.plot()
+
+    list1 = [1, 5, 3, 1, 4]
+    columns = ['w1', 'w2', 'w3', 'w4', 'w5']
+    # print columns
+    datapoint = pd.DataFrame(np.array([list1]), columns=columns)
+    predict = g.predict(datapoint)
+    print 'The prediction of ' + str(list1) + ' is ' + predict
+
+def decisionTree_version1(trainning_list, testing_list, words_name, num_trainning_file=100, num_features=2000, min_node_size=1, max_node_depth=100, plot=False):
+    print "\nUsing decision tree..... \n"
+    trainning_start_time = time.time()
+    trainning_list = trainning_list[:num_trainning_file]
+    trainning_features = [row[0:num_features] for row in trainning_list]
+    trainning_prediction_class = [row[-1] for row in trainning_list]
+    for i in range(len(trainning_features) - 1):
+        trainning_features[i].append(trainning_prediction_class[i]) # including prediction_class
+    trainning_list = trainning_features
+    words_name = words_name[0:num_features]
+    words_name.append("category")
+    df = pd.DataFrame(trainning_list, columns=words_name)
+
+    g = ClassificationTree()
+    set_global_data(df)
+    parameters = dict()
+    parameters['min_node_size'] = min_node_size
+    parameters['max_node_depth'] = max_node_depth
+    parameters['response'] = 'category'
+    parameters['metric_kind'] = 'Entropy'
+    g.train(parameters=parameters)
+    if plot:
+        g.plot()
+    print 'Execution Time (sec) -  Training the Data Set: ' + str(time.time() - trainning_start_time)
+
+    testing_start_time = time.time()
+    # predict and compute correct rate
+    words_name = words_name[0:num_features]
+    num_correct = 0
+    total = len(testing_list)
+    for file in testing_list:
+        datapoint = pd.DataFrame(np.array([file[:num_features]]), columns=words_name)
+        predict = g.predict(datapoint)
+        if predict == file[-1]:
+            num_correct += 1
+    print 'The number of correct prediction is: ' + str(num_correct) + ' and the total number is: ' + str(total)
+    print 'The correctness is ' + str(float(num_correct)/total)
+
+    print 'Execution Time (sec) - Testing the Data Set: ' + str(time.time() - testing_start_time)
+    print 'Execution Time (sec) - Overall (Training + Test): ' + str(time.time() - trainning_start_time)
+    print '\nFinished decision tree.....'
+
+def decisionTree_version2(trainning_list, testing_list, criterion='gini', max_depth=None, draw=False):
+    print "\nUsing decision tree..... \n"
+    trainning_start_time = time.time()
+    num_features = len(trainning_list[0])-1
+    X_train = [row[0:num_features - 1] for row in trainning_list] #row[0:num_features - 1]
+    Y_train = [row[-1] for row in trainning_list]
+
+    if max_depth is None:
+        clf = tree.DecisionTreeClassifier(criterion=criterion)
+    else:
+        clf = tree.DecisionTreeClassifier(criterion=criterion, max_depth=max_depth)
+    clf = clf.fit(X_train, Y_train)
+    print 'Execution Time (sec) -  Training the Data Set: ' + str(time.time() - trainning_start_time)
+
+    testing_start_time = time.time()
+    # predict and compute correct rate
+    num_correct = 0
+    total = len(testing_list)
+    for file in testing_list:
+        predict = clf.predict(file[0:num_features - 1])
+        if predict == file[-1]:
+            num_correct += 1
+    print 'The number of correct prediction is: ' + str(num_correct) + ' and the total number is: ' + str(total)
+    print 'The correctness is ' + str(float(num_correct)/total)
+
+    print 'Execution Time (sec) - Testing the Data Set: ' + str(time.time() - testing_start_time)
+    print 'Execution Time (sec) - Overall (Training + Test): ' + str(time.time() - trainning_start_time)
+    print '\nFinished decision tree.....'
+
+    if draw:
+        dot_data = StringIO.StringIO()
+        tree.export_graphviz(clf, out_file=dot_data)
+        graph = pydot.graph_from_dot_data(dot_data.getvalue())
+        graph.write_pdf("DecisionTree.pdf")

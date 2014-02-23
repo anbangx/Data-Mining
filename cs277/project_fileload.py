@@ -1,19 +1,10 @@
-import os
-import re
-from nltk.corpus import stopwords
 from nltk.stem.porter import *
-import collections
 import time
 import cPickle as pickle
-import copy
 import math
-import numpy as np
-import pandas as pd
-import cs277.DecisionTree.DT as DT
-from sklearn import tree
-import pydot
-import StringIO
 
+
+import cs277.DecisionTree.DT as DT
 #
 # Pre-Process Part
 #
@@ -296,87 +287,14 @@ def tfidfCosineSimilarityDetail():
     print "\nTF-IDF Cosine Similarity Algorithm\n"
 
     
-    
 # Define Decision Tree algorithm.
-def decisionTree(training_list, testing_list, words_name, use_sklearn_lib=False):
+def decisionTree(training_list, testing_list, words_name, use_version2=True):
+    print "-----------------------------------------------------------------------------------------"
     print "\nDecision Tree Algorithm\n"
-    if use_sklearn_lib:
-        decisionTree_sklearn(training_list, testing_list)
+    if use_version2:
+        DT.decisionTree_version2(training_list, testing_list, max_depth=None)
     else:
-        decisionTree_own_version(training_list, testing_list, words_name, num_trainning_file=len(training_list), num_features=len(training_list[0]) - 1)
-
-def decisionTree_sklearn(trainning_list, testing_list, criterion='gini', max_depth=100, draw=False):
-    print "\nUsing sklearn library.... \n"
-    start_time = time.time()
-    # trainning_list = trainning_list[:1]
-    num_features = len(trainning_list[0])-1
-    X_train = [row[0:num_features - 1] for row in trainning_list] #row[0:num_features - 1]
-    Y_train = [row[-1] for row in trainning_list]
-
-    clf = tree.DecisionTreeClassifier(criterion=criterion)  # , max_depth=max_depth
-    clf = clf.fit(X_train, Y_train)
-
-    # predict and compute correct rate
-    num_correct = 0
-    total = len(testing_list)
-    for file in testing_list:
-        predict = clf.predict(file[0:num_features - 1])
-        if predict == file[-1]:
-            num_correct += 1
-    print 'The number of correct prediction is: ' + str(num_correct) + ' and the total number is: ' + str(total)
-    print 'The correctness is ' + str(float(num_correct)/total)
-
-    print "Finished sklearn decision tree. Elapsed Time: " + str(time.time() - start_time)
-
-    if draw:
-        dot_data = StringIO.StringIO()
-        tree.export_graphviz(clf, out_file=dot_data)
-        graph = pydot.graph_from_dot_data(dot_data.getvalue())
-        graph.write_pdf("DecisionTree.pdf")
-
-def dict_to_list(dict):
-    list = []
-    for k, v in dict.items():
-        v.insert(0, k)
-        list.append(v)
-    return list
-
-def decisionTree_own_version(trainning_list, testing_list, words_name, num_trainning_file=100, num_features=2000, min_node_size=1, max_node_depth=100):
-    print "\nUsing own version decision tree.... \n"
-    start_time = time.time()
-    trainning_list = trainning_list[:num_trainning_file]
-    trainning_features = [row[0:num_features] for row in trainning_list]
-    trainning_prediction_class = [row[-1] for row in trainning_list]
-    for i in range(len(trainning_features) - 1):
-        trainning_features[i].append(trainning_prediction_class[i]) # including prediction_class
-    trainning_list = trainning_features
-    words_name = words_name[0:num_features]
-    words_name.append("category")
-    df = pd.DataFrame(trainning_list, columns=words_name)
-
-    g = DT.ClassificationTree()
-    DT.set_global_data(df)
-    parameters = dict()
-    parameters['min_node_size'] = min_node_size
-    parameters['max_node_depth'] = max_node_depth
-    parameters['response'] = 'category'
-    parameters['metric_kind'] = 'Entropy'
-    g.train(parameters=parameters)
-    g.plot()
-
-    # predict and compute correct rate
-    words_name = words_name[0:num_features]
-    num_correct = 0
-    total = len(testing_list)
-    for file in testing_list:
-        datapoint = pd.DataFrame(np.array([file[:num_features]]), columns=words_name)
-        predict = g.predict(datapoint)
-        if predict == file[-1]:
-            num_correct += 1
-    print 'The number of correct prediction is: ' + str(num_correct) + ' and the total number is: ' + str(total)
-    print 'The correctness is ' + str(float(num_correct)/total)
-
-    print "Finished sklearn decision tree. Elapsed Time: " + str(time.time() - start_time)
+        DT.decisionTree_version1(training_list, testing_list, words_name, num_trainning_file=len(training_list), num_features=len(training_list[0]) - 1)
 
 # Define Decision Tree Algorithm in detail
 def decisionTreeDetail(list):
@@ -393,7 +311,6 @@ def naiveBayesDetail(list):
 # Execute TF-IDF based Cosine Similarity algorithm    
 # tfidfCosineSimilarity(termFrequencyPerCategoryList)
 
-# Execute Decision Tree algorithm
 # Execute Decision Tree algorithm
 decisionTree(frequencyInFilePerCategoryInTrainingSetList, frequencyInFilePerCategoryInTestSetList, wholeVocabularyFromTrainingAndTestSetList)
 

@@ -2,8 +2,9 @@ import os
 import re
 from nltk.corpus import stopwords
 from nltk.stem.porter import *
+from bisect import *
 import collections
-import numpy
+import numpy as np
 import time
 import cPickle as pickle
 
@@ -26,10 +27,11 @@ fileTestNum = 0
 categoryNum = 0
 categoryTestNum = 0
 outputFile = open('pre_processed_data_object', 'wb')
+filesToTrainAndTest = 10
 
 # File Fraction size to Read. Set between 0.1 and 1
-fileFractionSize = 0.1
-fileTestFractionSize = 0.1
+fileFractionSize = 1
+fileTestFractionSize = 1
 
 # Define Regular Expression to pre-process strings. Only AlphaNumeric and whitespace will be kept.
 strPattern = re.compile('[^a-zA-Z0-9 ]')
@@ -91,7 +93,7 @@ for category in categoryList:
     
 #     if category == 'acq' or category == '.DS_Store':
 #         continue
-#     if categoryNum == 10:
+#     if categoryNum == filesToTrainAndTest:
 #         break
      
     fileInCategoryList = os.listdir("./dataset/Reuters21578-Apte-115Cat/training/" + category + "/")
@@ -182,7 +184,7 @@ for categoryTest in categoryTestList:
     # Temporary code to reduce time to process. Eliminate when processing entire set
 #     if categoryTest == 'acq' or categoryTest == '.DS_Store':
 #         continue
-#     if categoryTestNum == 10:
+#     if categoryTestNum == filesToTrainAndTest:
 #         break
     
     fileInCategoryTestList = os.listdir("./dataset/Reuters21578-Apte-115Cat/test/" + categoryTest + "/")
@@ -368,48 +370,193 @@ normalizedFrequencyPerCategoryInTrainingSetDict = {}
 frequencyInFilePerCategoryInTrainingSetList = []
 frequencyInFilePerCategoryInTestSetList = []
 
-# key = filename, value : {category : {term:frequency ...}}
-for key,value in fileAlphaNumericStrStemmedDict.iteritems():
+# Specify number of bins
+numberOfBins = 5
+frequencyInWordPerFileInTrainingSetList = []
+frequencyInWordPerFileInTestSetList = []
+
+# Helper function: 'Find rightmost value less than or equal to x in a'
+# From http://docs.python.org/2/library/bisect.html#searching-sorted-lists
+def find_le(a, x):
+    i = bisect_right(a, x)
+    if i:
+        return i-1
+    else:
+        return -1
     
+#
+# Non-Sampling version of frequencyInFilePerCategoryInTrainingSetList
+#
+
+# # key = filename, value : {category : {term:frequency ...}}
+# for key,value in fileAlphaNumericStrStemmedDict.iteritems():
+#     
+#     tmpList = []
+#     
+#     # key1 = category, value1 : {term:frequency... }
+#     for key1, value1 in value.iteritems():
+#         
+#         for term in wholeVocabularyFromTrainingAndTestSetList:
+#             
+#             if term in value1:
+#                 tmpList.append(value1[term])
+#             else:
+#                 tmpList.append(0)
+#         
+#         for idx in fileBelongCategory[key]:
+#             tmpList1 = tmpList
+#             tmpList1.append(idx)
+#             
+#             frequencyInFilePerCategoryInTrainingSetList.append(tmpList1)
+
+#
+# Sampling version of frequencyInFilePerCategoryInTrainingSetList
+#
+
+# First, calculate term frequecy per each word across whole file
+for term in wholeVocabularyFromTrainingAndTestSetList:
+
     tmpList = []
     
-    # key1 = category, value1 : {term:frequency... }
-    for key1, value1 in value.iteritems():
-        
-        for term in wholeVocabularyFromTrainingAndTestSetList:
+    # key = filename, value : {category : {term:frequency ...}}
+    for key, value in fileAlphaNumericStrStemmedDict.iteritems():
+
+        # key1 = category, value1 : {term:frequency... }
+        for key1, value1 in value.iteritems():
             
+            # term is found
             if term in value1:
                 tmpList.append(value1[term])
             else:
                 tmpList.append(0)
-        
-        for idx in fileBelongCategory[key]:
-            tmpList1 = tmpList
-            tmpList1.append(idx)
-            
-            frequencyInFilePerCategoryInTrainingSetList.append(tmpList1)
-
-# key = filename, value : {category : {term:frequency ...}}
-for key,value in fileTestAlphaNumericStrStemmedDict.iteritems():
+                
+    minValue = min(tmpList)
+    maxValue = max(tmpList)
+    interval = 0.0
+    bins = []
+    # print
+    # print str(minValue) + ", " + str(maxValue) 
+    # print tmpList
     
+    # If max value is zero, then we don't need to apply sampling since all value is zero
+    if maxValue == 0:
+        frequencyInWordPerFileInTrainingSetList.append(tmpList)
+    else:
+        interval = float((minValue + maxValue)) / numberOfBins
+        bins = np.arange(minValue,maxValue,interval)
+        for idx, val in enumerate(tmpList):
+            tmpVal = find_le(bins, val) * interval
+            tmpList[idx] = tmpVal
+        # print str(minValue) + ", " + str(maxValue) + ", " + str(interval) + ", " + str(len(tmpList)) + ", " + str(len(fileAlphaNumericStrStemmedDict)) + "," + str(bins)
+        # print tmpList
+        frequencyInWordPerFileInTrainingSetList.append(tmpList)    
+
+tmpCount = 0
+
+# Next, Reorganize the list per file, not per word
+for key, value in fileAlphaNumericStrStemmedDict.iteritems():
+
     tmpList = []
     
-    # key1 = category, value1 : {term:frequency... }
-    for key1, value1 in value.iteritems():
+    for i in range(0,len(frequencyInWordPerFileInTrainingSetList)):
+        tmpList.append(frequencyInWordPerFileInTrainingSetList[i][tmpCount])
         
-        for term in wholeVocabularyFromTrainingAndTestSetList:
+    for cat in fileBelongCategory[key]:
+        tmpList1 = tmpList
+        tmpList1.append(cat)
+        frequencyInFilePerCategoryInTrainingSetList.append(tmpList1)
+    
+    tmpCount += 1
+
+del frequencyInWordPerFileInTrainingSetList
+
+
+#
+# Non-sampling version of frequencyInFilePerCategoryInTestSetList
+#
+
+# key = filename, value : {category : {term:frequency ...}}
+# for key,value in fileTestAlphaNumericStrStemmedDict.iteritems():
+#     
+#     tmpList = []
+#     
+#     # key1 = category, value1 : {term:frequency... }
+#     for key1, value1 in value.iteritems():
+#         
+#         for term in wholeVocabularyFromTrainingAndTestSetList:
+#             
+#             if term in value1:
+#                 tmpList.append(value1[term])
+#             else:
+#                 tmpList.append(0)
+#         
+#         for idx in fileTestBelongCategory[key]:
+#             tmpList1 = tmpList
+#             tmpList1.append(idx)
+#             
+#             frequencyInFilePerCategoryInTestSetList.append(tmpList1)
+
+
+#
+# Sampling version of frequencyInFilePerCategoryInTestSetList
+#
+
+# First, calculate term frequecy per each word across whole file
+for term in wholeVocabularyFromTrainingAndTestSetList:
+
+    tmpList = []
+    
+    # key = filename, value : {category : {term:frequency ...}}
+    for key, value in fileTestAlphaNumericStrStemmedDict.iteritems():
+
+        # key1 = category, value1 : {term:frequency... }
+        for key1, value1 in value.iteritems():
             
+            # term is found
             if term in value1:
                 tmpList.append(value1[term])
             else:
                 tmpList.append(0)
-        
-        for idx in fileTestBelongCategory[key]:
-            tmpList1 = tmpList
-            tmpList1.append(idx)
-            
-            frequencyInFilePerCategoryInTestSetList.append(tmpList1)
+                
+    minValue = min(tmpList)
+    maxValue = max(tmpList)
+    interval = 0.0
+    bins = []
+    # print
+    # print str(minValue) + ", " + str(maxValue) 
+    # print tmpList
+    
+    # If max value is zero, then we don't need to apply sampling since all value is zero
+    if maxValue == 0:
+        frequencyInWordPerFileInTestSetList.append(tmpList)
+    else:
+        interval = float((minValue + maxValue)) / numberOfBins
+        bins = np.arange(minValue,maxValue,interval)
+        for idx, val in enumerate(tmpList):
+            tmpVal = find_le(bins, val) * interval
+            tmpList[idx] = tmpVal
+        # print str(minValue) + ", " + str(maxValue) + ", " + str(interval) + ", " + str(len(tmpList)) + ", " + str(len(fileAlphaNumericStrStemmedDict)) + "," + str(bins)
+        # print tmpList
+        frequencyInWordPerFileInTestSetList.append(tmpList)    
 
+tmpCount = 0
+
+# Next, Reorganize the list per file, not per word
+for key, value in fileTestAlphaNumericStrStemmedDict.iteritems():
+
+    tmpList = []
+    
+    for i in range(0,len(frequencyInWordPerFileInTestSetList)):
+        tmpList.append(frequencyInWordPerFileInTestSetList[i][tmpCount])
+        
+    for cat in fileTestBelongCategory[key]:
+        tmpList1 = tmpList
+        tmpList1.append(cat)
+        frequencyInFilePerCategoryInTestSetList.append(tmpList1)
+    
+    tmpCount += 1
+
+del frequencyInWordPerFileInTestSetList
         
       
 # # key : category, value : {term : frequency, term : frequency ...}}
@@ -507,9 +654,7 @@ def naiveBayesDetail(list):
     print "\nNaive Bayes Algorithm\n"
 
 # Execute TF-IDF based Cosine Similarity algorithm    
-tfidfCosineSimilarity(termFrequencyPerCategoryList)
-
-# Execute Decision Tree algorithm
+tfidfCosineSimilarity(termFrequencyPerCategoryList)# Execute Decision Tree algorithm
 decisionTree(termFrequencyPerCategoryList)
 
 # Execute NaiveBayes algorithm
