@@ -237,7 +237,7 @@ class ClassificationTree(PivotDecisionTree):
             return self.root.get_data_leaf(data_point).predicted_class
 
     def plot(self):
-        f = open('../myfile', 'w')
+        f = open('./tree.output', 'w')
 
         q = Queue.Queue()
         q.put(self.root)
@@ -314,7 +314,7 @@ if debug:
     predict = g.predict(datapoint)
     print 'The prediction of ' + str(list1) + ' is ' + predict
 
-def decisionTree_version1(trainning_list, testing_list, words_name, num_trainning_file=100, num_features=2000, min_node_size=1, max_node_depth=100, plot=False):
+def decisionTree_version1(trainning_list, testing_list, words_name, num_trainning_file=100, num_features=2000, min_node_size=1, max_node_depth=4, plot=True):
     print "\nUsing decision tree..... \n"
     trainning_start_time = time.time()
     trainning_list = trainning_list[:num_trainning_file]
@@ -356,7 +356,9 @@ def decisionTree_version1(trainning_list, testing_list, words_name, num_trainnin
     print 'Execution Time (sec) - Overall (Training + Test): ' + str(time.time() - trainning_start_time)
     print '\nFinished decision tree.....'
 
-def decisionTree_version2(trainning_list, testing_list, criterion='gini', max_depth=None, draw=False):
+def decisionTree_version2(trainning_list, testing_list, criterion='gini', max_depth=None, adjust_depth_dict=None, draw=False):
+    correctness_and_time = []
+    adjust_depth_dict[max_depth] = correctness_and_time
     print "\nUsing decision tree..... \n"
     trainning_start_time = time.time()
     num_features = len(trainning_list[0])-1
@@ -379,11 +381,15 @@ def decisionTree_version2(trainning_list, testing_list, criterion='gini', max_de
         if predict == file[-1]:
             num_correct += 1
     print 'The number of correct prediction is: ' + str(num_correct) + ' and the total number is: ' + str(total)
-    print 'The correctness is ' + str(float(num_correct)/total)
+    correctness = float(num_correct)/total
+    print 'The correctness is ' + str(correctness)
 
     print 'Execution Time (sec) - Testing the Data Set: ' + str(time.time() - testing_start_time)
     print 'Execution Time (sec) - Overall (Training + Test): ' + str(time.time() - trainning_start_time)
     print '\nFinished decision tree.....'
+
+    correctness_and_time.append(correctness)
+    correctness_and_time.append(time.time() - trainning_start_time)
 
     if draw:
         dot_data = StringIO.StringIO()

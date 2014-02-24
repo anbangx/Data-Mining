@@ -286,15 +286,25 @@ def tfidfCosineSimilarity(list):
 def tfidfCosineSimilarityDetail():
     print "\nTF-IDF Cosine Similarity Algorithm\n"
 
-    
+def save_obj(obj, name):
+    with open('obj/'+ name + '.pkl', 'wb') as f:
+        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
+
+def load_obj(name):
+    with open('obj/' + name + '.pkl', 'r') as f:
+        return pickle.load(f)
+
 # Define Decision Tree algorithm.
 def decisionTree(training_list, testing_list, words_name, use_version2=True):
     print "-----------------------------------------------------------------------------------------"
     print "\nDecision Tree Algorithm\n"
     if use_version2:
-        DT.decisionTree_version2(training_list, testing_list, max_depth=None)
+        adjust_depth_dict = {}
+        for max_depth in range(10, 121, 10):
+            DT.decisionTree_version2(training_list, testing_list, max_depth=max_depth, adjust_depth_dict=adjust_depth_dict)
+        save_obj(adjust_depth_dict, 'adjust_depth')
     else:
-        DT.decisionTree_version1(training_list, testing_list, words_name, num_trainning_file=len(training_list), num_features=len(training_list[0]) - 1)
+        DT.decisionTree_version1(training_list, testing_list, words_name, num_trainning_file=200, num_features=1000) # num_trainning_file=len(training_list), num_features=len(training_list[0]) - 1
 
 # Define Decision Tree Algorithm in detail
 def decisionTreeDetail(list):

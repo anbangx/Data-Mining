@@ -30,8 +30,8 @@ outputFile = open('pre_processed_data_object', 'wb')
 filesToTrainAndTest = 10
 
 # File Fraction size to Read. Set between 0.1 and 1
-fileFractionSize = 1
-fileTestFractionSize = 1
+fileFractionSize = 0.1
+fileTestFractionSize = 0.1
 
 # Define Regular Expression to pre-process strings. Only AlphaNumeric and whitespace will be kept.
 strPattern = re.compile('[^a-zA-Z0-9 ]')
