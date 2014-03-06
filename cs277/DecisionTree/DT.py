@@ -331,7 +331,7 @@ def decisionTree_version1(trainning_list, testing_list, words_name, num_trainnin
     set_global_data(df)
     parameters = dict()
     parameters['min_node_size'] = min_node_size
-    parameters['max_node_depth'] = max_node_depth
+    parameters['max_node_depth'] = 3; max_node_depth
     parameters['response'] = 'category'
     parameters['metric_kind'] = 'Entropy'
     g.train(parameters=parameters)
@@ -339,26 +339,26 @@ def decisionTree_version1(trainning_list, testing_list, words_name, num_trainnin
         g.plot()
     print 'Execution Time (sec) -  Training the Data Set: ' + str(time.time() - trainning_start_time)
 
-    testing_start_time = time.time()
-    # predict and compute correct rate
-    words_name = words_name[0:num_features]
-    num_correct = 0
-    total = len(testing_list)
-    for file in testing_list:
-        datapoint = pd.DataFrame(np.array([file[:num_features]]), columns=words_name)
-        predict = g.predict(datapoint)
-        if predict == file[-1]:
-            num_correct += 1
-    print 'The number of correct prediction is: ' + str(num_correct) + ' and the total number is: ' + str(total)
-    print 'The correctness is ' + str(float(num_correct)/total)
+    # testing_start_time = time.time()
+    # # predict and compute correct rate
+    # words_name = words_name[0:num_features]
+    # num_correct = 0
+    # total = len(testing_list)
+    # for file in testing_list:
+    #     datapoint = pd.DataFrame(np.array([file[:num_features]]), columns=words_name)
+    #     predict = g.predict(datapoint)
+    #     if predict == file[-1]:
+    #         num_correct += 1
+    # print 'The number of correct prediction is: ' + str(num_correct) + ' and the total number is: ' + str(total)
+    # print 'The correctness is ' + str(float(num_correct)/total)
+    #
+    # print 'Execution Time (sec) - Testing the Data Set: ' + str(time.time() - testing_start_time)
+    # print 'Execution Time (sec) - Overall (Training + Test): ' + str(time.time() - trainning_start_time)
+    # print '\nFinished decision tree.....'
 
-    print 'Execution Time (sec) - Testing the Data Set: ' + str(time.time() - testing_start_time)
-    print 'Execution Time (sec) - Overall (Training + Test): ' + str(time.time() - trainning_start_time)
-    print '\nFinished decision tree.....'
-
-def decisionTree_version2(trainning_list, testing_list, criterion='gini', max_depth=None, adjust_depth_dict=None, draw=False):
-    correctness_and_time = []
-    adjust_depth_dict[max_depth] = correctness_and_time
+def decisionTree_version2(trainning_list, testing_list, fileTestBelongCategory, criterion='gini', max_depth=None, adjust_depth_dict=None, draw=False):
+    # correctness_and_time = []
+    # adjust_depth_dict[max_depth] = correctness_and_time
     print "\nUsing decision tree..... \n"
     trainning_start_time = time.time()
     num_features = len(trainning_list[0])-1
@@ -366,9 +366,9 @@ def decisionTree_version2(trainning_list, testing_list, criterion='gini', max_de
     Y_train = [row[-1] for row in trainning_list]
 
     if max_depth is None:
-        clf = tree.DecisionTreeClassifier(criterion=criterion)
+        clf = tree.DecisionTreeClassifier(criterion=criterion) # , max_features='log2'
     else:
-        clf = tree.DecisionTreeClassifier(criterion=criterion, max_depth=max_depth)
+        clf = tree.DecisionTreeClassifier(criterion=criterion, max_depth=max_depth, max_features='sqrt')
     clf = clf.fit(X_train, Y_train)
     print 'Execution Time (sec) -  Training the Data Set: ' + str(time.time() - trainning_start_time)
 
@@ -378,7 +378,7 @@ def decisionTree_version2(trainning_list, testing_list, criterion='gini', max_de
     total = len(testing_list)
     for file in testing_list:
         predict = clf.predict(file[0:num_features - 1])
-        if predict == file[-1]:
+        if predict in fileTestBelongCategory[file[-1]]:
             num_correct += 1
     print 'The number of correct prediction is: ' + str(num_correct) + ' and the total number is: ' + str(total)
     correctness = float(num_correct)/total
@@ -388,8 +388,8 @@ def decisionTree_version2(trainning_list, testing_list, criterion='gini', max_de
     print 'Execution Time (sec) - Overall (Training + Test): ' + str(time.time() - trainning_start_time)
     print '\nFinished decision tree.....'
 
-    correctness_and_time.append(correctness)
-    correctness_and_time.append(time.time() - trainning_start_time)
+    # correctness_and_time.append(correctness)
+    # correctness_and_time.append(time.time() - trainning_start_time)
 
     if draw:
         dot_data = StringIO.StringIO()

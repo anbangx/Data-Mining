@@ -1,0 +1,13 @@
+depth:0 split_attribute: countri frequence_pivot: 0.0 
+depth:1 split_attribute: decis frequence_pivot: 0.0 
+depth:1 split_attribute: adapt frequence_pivot: 0.0 
+depth:2 split_attribute: four frequence_pivot: 0.0 
+depth:2 split_attribute: confus frequence_pivot: 0.0 
+depth:2 split_attribute: deterior frequence_pivot: 0.0 
+depth:2 prediction: {'soybean': 1.0}
+depth:3 prediction: {'copper': 0.006024096385542169, 'gold': 0.018072289156626505, 'money-fx': 0.048192771084337352, 'ipi': 0.012048192771084338, 'trade': 0.03614457831325301, 'reserves': 0.006024096385542169, 'soybean': 0.030120481927710843, 'ship': 0.018072289156626505, 'alum': 0.006024096385542169, 'sugar': 0.012048192771084338, 'rubber': 0.006024096385542169, 'veg-oil': 0.012048192771084338, 'interest': 0.018072289156626505, 'crude': 0.048192771084337352, 'jobs': 0.006024096385542169, 'carcass': 0.006024096385542169, 'gas': 0.006024096385542169, 'gnp': 0.006024096385542169, 'earn': 0.40361445783132532, 'stg': 0.006024096385542169, 'money-supply': 0.018072289156626505, 'acq': 0.18072289156626506, 'grain': 0.084337349397590355, 'retail': 0.006024096385542169}
+depth:3 prediction: {'earn': 0.23529411764705882, 'money-fx': 0.23529411764705882, 'nat-gas': 0.058823529411764705, 'sugar': 0.058823529411764705, 'grain': 0.17647058823529413, 'crude': 0.11764705882352941, 'ship': 0.11764705882352941}
+depth:3 prediction: {'crude': 0.5, 'gnp': 0.5}
+depth:3 prediction: {'soybean': 1.0}
+depth:3 prediction: {'stg': 1.0}
+depth:3 prediction: {'crude': 1.0}
