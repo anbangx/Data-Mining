@@ -8,6 +8,8 @@ import numpy as np
 import time
 import pydot
 import StringIO
+import collections
+import itertools
 
 global_data = ''
 def set_global_data(data):
@@ -396,3 +398,32 @@ def decisionTree_version2(trainning_list, testing_list, fileTestBelongCategory, 
         tree.export_graphviz(clf, out_file=dot_data)
         graph = pydot.graph_from_dot_data(dot_data.getvalue())
         graph.write_pdf("DecisionTree.pdf")
+
+def get_top_k_categories(value_list, name_list, k=1):
+    value_to_name_dict = dict(zip(value_list, name_list))
+    ordered_dict = collections.OrderedDict(reversed(sorted(value_to_name_dict.items())))
+    first_k = list(itertools.islice(ordered_dict.values(), 0, k))
+    return first_k
+
+def create_decision_tree(trainning_list, criterion='gini', max_depth=None):
+    print "\nUsing decision tree..... \n"
+    trainning_start_time = time.time()
+    num_features = len(trainning_list[0])-1
+    X_train = [row[0:num_features - 1] for row in trainning_list] #row[0:num_features - 1]
+    Y_train = [row[-1] for row in trainning_list]
+
+    if max_depth is None:
+        clf = tree.DecisionTreeClassifier(criterion=criterion)
+    else:
+        clf = tree.DecisionTreeClassifier(criterion=criterion, max_depth=max_depth, max_features='sqrt')
+    clf = clf.fit(X_train, Y_train)
+    print 'Execution Time (sec) -  Training the Data Set: ' + str(time.time() - trainning_start_time)
+    return clf
+
+def get_top_k_prediction_class(clf, file, k=1, debug=False):
+    num_features = len(file)-1
+    predict_proba = clf.predict_proba(file[0:num_features - 1])
+    top_k = get_top_k_categories(predict_proba[0], clf.classes_, k)
+    if debug:
+        print 'The top k predication class is ' + str(top_k)
+    return top_k

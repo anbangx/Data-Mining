@@ -4,7 +4,7 @@ import cPickle as pickle
 import math
 
 
-import cs277.DecisionTree.DT as DT
+import DecisionTree.DT as DT
 #
 # Pre-Process Part
 #
@@ -151,7 +151,7 @@ def decisionTree(training_list, testing_list, fileTestBelongCategory, words_name
         # for max_depth in range(10, 121, 10):
         #     DT.decisionTree_version2(training_list, testing_list, max_depth=max_depth, adjust_depth_dict=adjust_depth_dict)
         # save_obj(adjust_depth_dict, 'adjust_depth')
-        DT.decisionTree_version2(training_list, testing_list, fileTestBelongCategory)
+        DT.decisionTree_version2(training_list, testing_list, fileTestBelongCategory, max_depth=10)
     else:
         DT.decisionTree_version1(training_list, testing_list, words_name, num_trainning_file=200, num_features=1000) # num_trainning_file=len(training_list), num_features=len(training_list[0]) - 1
 
@@ -171,7 +171,10 @@ def naiveBayesDetail(list):
 # tfidfCosineSimilarity(termFrequencyPerCategoryList)
 
 # Execute Decision Tree algorithm
-decisionTree(frequencyInFilePerCategoryInTrainingSetList, frequencyInFilePerCategoryInTestSetList, fileTestBelongCategory, wholeVocabularyFromTrainingAndTestSetList)
+# decisionTree(frequencyInFilePerCategoryInTrainingSetList, frequencyInFilePerCategoryInTestSetList, fileTestBelongCategory, wholeVocabularyFromTrainingAndTestSetList)
+clf = DT.create_decision_tree(frequencyInFilePerCategoryInTrainingSetList, max_depth=50)
+top_k_categories = DT.get_top_k_prediction_class(clf, frequencyInFilePerCategoryInTestSetList[0], k=20)
+print top_k_categories
 
 # Execute NaiveBayes algorithm
 # naiveBayes(termFrequencyPerCategoryList)
