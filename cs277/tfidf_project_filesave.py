@@ -1,3 +1,4 @@
+import sys
 import os
 import re
 from nltk.corpus import stopwords
@@ -7,17 +8,40 @@ import collections
 import numpy as np
 import time
 import cPickle as pickle
+import decimal
 
 #
 # Pre-Process Part
 #
 
+# Set fraction size and prefix path
+# File Fraction size to Read. Set between 0.1 and 1
+fileFractionSize = 1
+fileTestFractionSize = 1
+prefixPath = "./dataset/Reuters21578-Apte-115Cat/"
+# prefixPath = "./dataset/20news-bydate/"
+# prefixPath = "./dataset/ohsumed-first-20000-docs/"
+
+# Parameter : #1 - fraction size. #2 - dataSet
+# Example: python project_save.py 1 ./dataset/Reuters21578-Apte-115Cat/
+
+# Set FractionSize and Data Set to Use
+if len(sys.argv) >= 2:
+    if float(sys.argv[1]) > 0 and float(sys.argv[1]) <= 1:
+        fileTestFractionSize = sys.argv[1]
+
+if len(sys.argv) == 3:
+    prefixPath = sys.argv[2]
+
 startTime = time.time()
 print "Starting...\n"
 
+
 # Identify Category
-categoryList =  os.listdir("./dataset/Reuters21578-Apte-115Cat/training/")
-categoryTestList = os.listdir("./dataset/Reuters21578-Apte-115Cat/test/")
+dataSet = prefixPath.split('/')[2]
+print "Data Set to be used:\t" + dataSet
+categoryList =  os.listdir(prefixPath + "training/")
+categoryTestList = os.listdir(prefixPath + "test/")
 
 # StopWord Definition
 stopwordsList = stopwords.words('english')
@@ -26,12 +50,13 @@ fileNum = 0
 fileTestNum = 0
 categoryNum = 0
 categoryTestNum = 0
-outputFile = open('pre_processed_data_object_tfidf', 'wb')
+outputFile = open('pre_processed_data_object_tfidf_' + dataSet + "_" + str(fileTestFractionSize), 'wb')
 filesToTrainAndTest = 10
 
 # File Fraction size to Read. Set between 0.1 and 1
-fileFractionSize = 0.1
-fileTestFractionSize = 0.1
+fileFractionSize = decimal.Decimal(fileFractionSize,1)
+fileTestFractionSize = decimal.Decimal(fileTestFractionSize,1)
+print "Fraction to be used:\t" + str(fileTestFractionSize)
 
 # Define Regular Expression to pre-process strings. Only AlphaNumeric and whitespace will be kept.
 strPattern = re.compile('[^a-zA-Z0-9 ]')
@@ -41,6 +66,11 @@ strPattern = re.compile('[^a-zA-Z0-9 ]')
 # Example : {'acq' : {'hi':1,'compu':3,'move':1 ...}}
 categoryAlphaNumericStrStemmedDict = {}
 categoryTestAlphaNumericStrStemmedDict = {}
+
+# A dictionary which keeps token and its frequency for each file in each category for TEST set
+# {category : { file : {term : frequency ...}}}
+# Example : {acq : { 000056 : {'hi' : 1 , 'compu' : 3 ...}}}
+categoryTestAllFileAlphaNumericStrStemmedDict = {}
 
 # A dictionary which keeps token, its frequency, and category for each file. It is layered Dictionary structure.
 # 1st layer Dict {A}: key - category, value-{'term':frequency}
@@ -90,13 +120,13 @@ for category in categoryList:
     tmpTime = time.time()
 
     # Temporary code to reduce time to process. Eliminate when processing entire set
-    
-#     if category == 'acq' or category == '.DS_Store':
-#         continue
-#     if categoryNum == filesToTrainAndTest:
-#         break
-     
-    fileInCategoryList = os.listdir("./dataset/Reuters21578-Apte-115Cat/training/" + category + "/")
+
+    # if category == 'acq' or category == '.DS_Store':
+    #     continue
+    # if categoryNum == filesToTrainAndTest:
+    #     break
+
+    fileInCategoryList = os.listdir(prefixPath + "training/" + category + "/")
     tmpCategoryAlphaNumericStrStemmedDict = {}
     # categoryAlphaNumericStrStemmedDict[categoryNum][0] = category
     # categoryTmpColumn = {}
@@ -105,10 +135,10 @@ for category in categoryList:
     tmpFreqPerCategory = 0
     tmpNumberOfUniqueTermPerCategory = 0
     tmpNumberOfTermPerCategory = 0
-    
+
     for fileToTrain in fileInCategoryList:
-        fileToTrainPath = './dataset/Reuters21578-Apte-115Cat/training/' + category + '/' + fileToTrain
-        
+        fileToTrainPath = prefixPath + 'training/' + category + '/' + fileToTrain
+
         # Check the file size and read some fraction of the file defined in "fileFractionSize" variable
         filesize = os.path.getsize(fileToTrainPath)
         chunkReadSize = int(round(filesize * fileFractionSize))
@@ -127,6 +157,7 @@ for category in categoryList:
 
         # Remove Stop Words and Tokenize the chunk into a List by using whitespace
         fileAlphaNumericStrNoStopWords = ' '.join([word for word in fileAlphaNumericStr.split() if word not in stopwordsList])
+        # fileAlphaNumericStrNoStopWords = ' '.join([word for word in fileAlphaNumericStr.split()])
         fileAlphaNumericStrList = fileAlphaNumericStrNoStopWords.split()
 #         fileAlphaNumericStrList = fileAlphaNumericStr.split()
 
@@ -136,6 +167,7 @@ for category in categoryList:
         # Create vector space (Dict) for each category
         for words in fileAlphaNumericStrList:
             tmp = stemmer.stem(words)
+            # tmp = words
             tmp1 = tmpFileAlphaNumericStrStemmedDict.get(tmp)
             tmp2 = tmpCategoryAlphaNumericStrStemmedDict.get(tmp)
             if tmp1 == None:
@@ -146,13 +178,13 @@ for category in categoryList:
                 tmpCategoryAlphaNumericStrStemmedDict[tmp] = 1
             else:
                 tmpCategoryAlphaNumericStrStemmedDict[tmp] = tmp2 + 1
-            tmpFreqPerCategory += 1    
+            tmpFreqPerCategory += 1
             if tmp not in wholeVocabularySet:
                 wholeVocabularySet.add(tmp)
 
         fileTmpColumn1[category] = tmpFileAlphaNumericStrStemmedDict
         # fileTmpColumn.append(tmpFileAlphaNumericStrStemmedDict)
-        # fileTmpColumn[str(fileToTrain)] = fileTmpColumn1 
+        # fileTmpColumn[str(fileToTrain)] = fileTmpColumn1
         fileNum += 1
         tmpFileNum += 1
         if fileToTrain in fileAlphaNumericStrStemmedDict:
@@ -163,13 +195,13 @@ for category in categoryList:
             fileBelongCategory[fileToTrain] = tmp
 
         fileAlphaNumericStrStemmedDict[fileToTrain] = fileTmpColumn1
-                    
+
     # categoryTmpColumn.append(tmpCategoryAlphaNumericStrStemmedDict)
     categoryAlphaNumericStrStemmedDict[category] = tmpCategoryAlphaNumericStrStemmedDict
     categoryNum += 1
     wholeVocabularyFrequency += tmpFreqPerCategory
     numberOfFilesInEachCategoryDict[category] = tmpFileNum
-    
+
     print "%6.3g"%(time.time() - startTime) + "\t" + "%6.3g"%(time.time() - tmpTime) + "\t" + str(categoryNum) +  "\t" + category + "\t" + str(tmpFileNum) + "\t" + str(len(tmpCategoryAlphaNumericStrStemmedDict)) + "\t" + str(tmpFreqPerCategory)
 
 
@@ -182,12 +214,9 @@ for categoryTest in categoryTestList:
     tmpTime = time.time()
 
     # Temporary code to reduce time to process. Eliminate when processing entire set
-#     if categoryTest == 'acq' or categoryTest == '.DS_Store':
-#         continue
-#     if categoryTestNum == filesToTrainAndTest:
-#         break
-    
-    fileInCategoryTestList = os.listdir("./dataset/Reuters21578-Apte-115Cat/test/" + categoryTest + "/")
+
+
+    fileInCategoryTestList = os.listdir(prefixPath + "test/" + categoryTest + "/")
     tmpCategoryTestAlphaNumericStrStemmedDict = {}
     # categoryAlphaNumericStrStemmedDict[categoryNum][0] = category
     # categoryTestTmpColumn = []
@@ -196,10 +225,10 @@ for categoryTest in categoryTestList:
     tmpFreqPerCategoryTest= 0
     tmpNumberOfUniqueTermPerCategoryTest = 0
     tmpNumberOfTermPerCategoryTest = 0
-    
+
     for fileToTest in fileInCategoryTestList:
-        fileToTestPath = './dataset/Reuters21578-Apte-115Cat/test/' + categoryTest + '/' + fileToTest
-        
+        fileToTestPath = prefixPath + 'test/' + categoryTest + '/' + fileToTest
+
         # Check the file size and read some fraction of the file defined in "fileFractionSize" variable
         filesizeTest = os.path.getsize(fileToTestPath)
         chunkTestReadSize = int(round(filesizeTest * fileTestFractionSize))
@@ -207,7 +236,7 @@ for categoryTest in categoryTestList:
         fileTestStr = f.read(chunkTestReadSize)
         fileTestTmpColumn = {}
         # fileTestTmp1Column = {}
-        
+
         # fileTestTmpColumn.append(str(categoryTest))
         # fileTestTmpColumn.append(str(fileToTest))
 
@@ -219,6 +248,7 @@ for categoryTest in categoryTestList:
 
         # Remove Stop Words and Tokenize the chunk into a List by using whitespace
         fileTestAlphaNumericStrNoStopWords = ' '.join([word for word in fileTestAlphaNumericStr.split() if word not in stopwordsList])
+        # fileTestAlphaNumericStrNoStopWords = ' '.join([word for word in fileTestAlphaNumericStr.split()])
         fileTestAlphaNumericStrList = fileTestAlphaNumericStrNoStopWords.split()
 
         # Apply Porter Stemmer and Put token and frequency to One Dict
@@ -227,6 +257,7 @@ for categoryTest in categoryTestList:
         # Create vector space (Dict) for each category
         for words in fileTestAlphaNumericStrList:
             tmp = stemmer.stem(words)
+            # tmp = words
             if tmpFileTestAlphaNumericStrStemmedDict.get(tmp) == None:
                 tmpFileTestAlphaNumericStrStemmedDict[tmp] = 1
             else:
@@ -235,12 +266,13 @@ for categoryTest in categoryTestList:
                 tmpCategoryTestAlphaNumericStrStemmedDict[tmp] = 1
             else:
                 tmpCategoryTestAlphaNumericStrStemmedDict[tmp] += 1
-            tmpFreqPerCategoryTest += 1    
+            tmpFreqPerCategoryTest += 1
             if tmp not in wholeTestVocabularySet:
                 wholeTestVocabularySet.add(tmp)
 
         fileTestTmpColumn[categoryTest] = tmpFileTestAlphaNumericStrStemmedDict
         # fileTestTmpColumn.append(tmpFileTestAlphaNumericStrStemmedDict)
+
         if fileToTest in fileTestAlphaNumericStrStemmedDict:
             fileTestBelongCategory[fileToTest].append(categoryTest)
         else:
@@ -249,16 +281,22 @@ for categoryTest in categoryTestList:
             fileTestBelongCategory[fileToTest] = tmp
 
         fileTestAlphaNumericStrStemmedDict[fileToTest] = fileTestTmpColumn
-            
+
+        # Put information to categoryTestAllFileAlphaNumericStrStemmedDict
+        try:
+            categoryTestAllFileAlphaNumericStrStemmedDict[categoryTest][fileToTest] = tmpFileTestAlphaNumericStrStemmedDict
+        except KeyError:
+            categoryTestAllFileAlphaNumericStrStemmedDict[categoryTest] = {fileToTest : tmpFileTestAlphaNumericStrStemmedDict}
+
         fileTestNum += 1
         tmpFileTestNum += 1
-        
+
     # categoryTestTmpColumn.append(tmpCategoryTestAlphaNumericStrStemmedDict)
     categoryTestAlphaNumericStrStemmedDict[categoryTest] = tmpCategoryTestAlphaNumericStrStemmedDict
     categoryTestNum += 1
     wholeTestVocabularyFrequency += tmpFreqPerCategoryTest
     numberOfFilesInEachCategoryTestDict[categoryTest] = tmpFileTestNum
-    
+
     print "%6.3g"%(time.time() - startTime) + "\t" + "%6.3g"%(time.time() - tmpTime) + "\t" + str(categoryTestNum) +  "\t" + categoryTest + "\t" + str(tmpFileTestNum) + "\t" + str(len(tmpCategoryTestAlphaNumericStrStemmedDict)) + "\t" + str(tmpFreqPerCategoryTest)
 
 
@@ -330,7 +368,7 @@ for key1, value1 in categoryTestAlphaNumericStrStemmedDict.iteritems():
 # for key1, value1 in fileAlphaNumericStrStemmedDict.iteritems():
 #     for key,value in value1.iteritems():
 #         print key + ":" + key1
-        
+
 # Calculate fractionOfFilesInEachCategoryDict
 # for key1, value1 in fileAlphaNumericStrStemmedDict.iteritems():
 #     for key, value in value1.iteritems():
@@ -379,7 +417,7 @@ def find_le(a, x):
         return i-1
     else:
         return -1
-    
+
 #
 # Non-Sampling version of frequencyInFilePerCategoryInTrainingSetList
 #
@@ -553,8 +591,8 @@ def find_le(a, x):
 #     tmpCount += 1
 # 
 # del frequencyInWordPerFileInTestSetList
-        
-      
+
+
 # # key : category, value : {term : frequency, term : frequency ...}}
 # for key, value in categoryAlphaNumericStrStemmedDict.iteritems():
 #   
@@ -593,11 +631,12 @@ def find_le(a, x):
 
 # for key,val in fileBelongCategory.iteritems():
 #     print key + "\t" + str(len(val))
-               
+
 pickle.dump(fileFractionSize, outputFile, -1)
 pickle.dump(fileTestFractionSize, outputFile, -1)
 pickle.dump(categoryAlphaNumericStrStemmedDict, outputFile, -1)
 pickle.dump(categoryTestAlphaNumericStrStemmedDict, outputFile, -1)
+pickle.dump(categoryTestAllFileAlphaNumericStrStemmedDict, outputFile, -1)
 pickle.dump(fileAlphaNumericStrStemmedDict, outputFile, -1)
 pickle.dump(fileTestAlphaNumericStrStemmedDict, outputFile, -1)
 pickle.dump(fileBelongCategory, outputFile, -1)
@@ -625,39 +664,34 @@ pickle.dump(termFrequencyPerCategoryList, outputFile, -1)
 
 # print termFrequencyPerCategoryList
 
-print 
+print "Done. Elapsed Time for pre-processing: " + str(time.time() - startTime)
 
-# Define TF-IDF based Cosine Similarity algorithm    
-def tfidfCosineSimilarity(list):
-    print "\nTF-IDF Cosine Similarity Algorithm\n"
 
-# Define TF-IDF based Cosine Similarity algorithm in Detail    
-def tfidfCosineSimilarityDetail(list):
-    print "\nTF-IDF Cosine Similarity Algorithm\n"
+# Now, print number of duplicated files
+print "\nNumber of Unique Files:\t" + str(len(fileAlphaNumericStrStemmedDict))
 
-# Define Decision Tree algorithm. 
-def decisionTree(list):
-    print "\nDecision Tree Algorithm\n"
-    
-# Define Decision Tree Algorithm in detail
-def decisionTreeDetail(list):
-    print "\nDecision Tree Algorithm\n"
+numberOfTotalFile = 0
+numberOfDuplicatedFile = 0
+for key, val in fileBelongCategory.iteritems():
+    if len(val) > 1:
+        numberOfDuplicatedFile += 1
+    numberOfTotalFile += len(val)
 
-# Define Naive Bayes algorithm
-def naiveBayes(list):
-    print "\nNaive Bayes Algorithm\n"
+print "Number of All Files:\t" + str(numberOfTotalFile)
+print "Number of Multi-Category Files:\t"+ str(numberOfDuplicatedFile)
 
-# Define Naive Bayes algorithm in detail
-def naiveBayesDetail(list):
-    print "\nNaive Bayes Algorithm\n"
+print "Number of Unique Test Files:\t"+ str(len(fileTestAlphaNumericStrStemmedDict))
 
-# Execute TF-IDF based Cosine Similarity algorithm    
-tfidfCosineSimilarity(termFrequencyPerCategoryList)
+numberOfTotalTestFile = 0
+numberOfDuplicatedTestFile = 0
+for key, val in fileTestBelongCategory.iteritems():
+    if len(val) > 1:
+        numberOfDuplicatedTestFile += 1
+    numberOfTotalTestFile += len(val)
 
-# Execute Decision Tree algorithm
-decisionTree(termFrequencyPerCategoryList)
+print "Number of All Test Files:\t" + str(numberOfTotalTestFile)
+print "Number of Multi-Category Test Files:\t"+ str(numberOfDuplicatedTestFile)
 
-# Execute NaiveBayes algorithm
-naiveBayes(termFrequencyPerCategoryList)
-    
+
+
 

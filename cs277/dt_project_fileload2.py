@@ -1,29 +1,27 @@
-import os
-import re
-from nltk.corpus import stopwords
-from nltk.stem.porter import *
-from operator import itemgetter
-import collections
-import numpy as np
-import time
-import cPickle as pickle
-import copy
 import math
+import time
+
+from nltk.stem.porter import *
+
+import DecisionTree.DT as DT
+import cPickle as pickle
+import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
-import numpy
+
+
+
+# import cs277.DecisionTree.DT as DT
 #
 # Pre-Process Part
 #
-
-startTime = time.time()
-
 # Set fraction size and prefix path
 # File Fraction size to Read. Set between 0.1 and 1
 fileFractionSize = 1
 fileTestFractionSize = 1
-prefixPath = "./dataset/Reuters21578-Apte-115Cat/"
-# prefixPath = "./dataset/20news-bydate/"
-# prefixPath = "./dataset/ohsumed-first-20000-docs/"
+#prefixPath = "./dataset/Reuters21578-Apte-115Cat/"
+#prefixPath = "./dataset/20news-bydate/"
+prefixPath = "./dataset/ohsumed-first-20000-docs/"
 
 # Parameter : #1 - fraction size. #2 - dataSet
 # Example: python project_save.py 1 ./dataset/Reuters21578-Apte-115Cat/
@@ -36,10 +34,12 @@ if len(sys.argv) >= 2:
 if len(sys.argv) == 3:
     prefixPath = sys.argv[2]
 
+
+startTime = time.time()
 dataSet = prefixPath.split('/')[2]
 print "Data Set to be used:\t" + dataSet
-outputFile = open('pre_processed_data_object_tfidf_' + dataSet + "_" + str(fileTestFractionSize), 'rb')
-
+outputFile = open('pre_processed_data_object_decision_tree_' + dataSet + "_" + str(fileTestFractionSize), 'rb')
+curveFile = open('curveInfo_' + dataSet + str(fileTestFractionSize), 'wb')
 # File Fraction size to Read. Set between 0.1 and 1
 fileFractionSize = pickle.load(outputFile)
 fileTestFractionSize = pickle.load(outputFile)
@@ -54,11 +54,6 @@ strPattern = re.compile('[^a-zA-Z0-9 ]')
 # Example : {'acq' : {'hi':1,'compu':3,'move':1 ...}}
 categoryAlphaNumericStrStemmedDict = pickle.load(outputFile)
 categoryTestAlphaNumericStrStemmedDict = pickle.load(outputFile)
-
-# A dictionary which keeps token and its frequency for each file in each category for TEST set
-# {category : { file : {term : frequency ...}}}
-# Example : {acq : { 000056 : {'hi' : 1 , 'compu' : 3 ...}}}
-categoryTestAllFileAlphaNumericStrStemmedDict = pickle.load(outputFile)
 
 # A dictionary which keeps token, its frequency, and category for each file. It is layered Dictionary structure.
 # 1st layer Dict {A}: key - category, value-{'term':frequency}
@@ -83,10 +78,6 @@ for key, val in fileTestBelongCategory.iteritems():
             assignedCategoryTest[cat] = []
             assignedCategoryTest[cat].append(key)
 
-
-# for key, val in fileTestBelongCategory.iteritems():
-#     print key + "\t" + str(len(val)) + "\t" + str(val)
-    
 # print fileTestBelongCategory
 
 # For entire vocabularies in the training set, create a dictionary that a list (value) which contains frequency per category (key)
@@ -94,8 +85,8 @@ for key, val in fileTestBelongCategory.iteritems():
 # Example : { 'category' : '[frequency for 'said', frequency for 'mln' ...]', 'category' : '[frequency for 'said', frequency for 'mln' ...]'  
 # normalizedFrequencyPerCategoryInTrainingSetDict = pickle.load(outputFile)
 
-# frequencyInFilePerCategoryInTrainingSetList = pickle.load(outputFile)
-# frequencyInFilePerCategoryInTestSetList = pickle.load(outputFile)
+frequencyInFilePerCategoryInTrainingSetList = pickle.load(outputFile)
+frequencyInFilePerCategoryInTestSetList = pickle.load(outputFile)
 
 # For entire vocabularies in the test set, create a dictionary that a list (value) which contains frequency per file (key)
 # Orders of vocabularies are same for every list. The order is as same as that of in wholeVocabularyFromTrainingAndTestSetList.
@@ -108,36 +99,26 @@ wholeVocabularyFromTrainingAndTestSetList = pickle.load(outputFile)
 
 # A list which keeps whole vocabularies throughout whole categories. It will be sorted.
 # Example : ['current', 'curtail', 'custom', 'cut', 'cuurent', 'cvg', 'cwt', 'cypru', 'cyrpu', 'd', 'daili' ...]
-wholeVocabularyList = pickle.load(outputFile)
-wholeTestVocabularyList = pickle.load(outputFile)
-
-wholeVocabularyFrequency = pickle.load(outputFile)
-wholeTestVocabularyFrequency = pickle.load(outputFile)
+# wholeVocabularyList = pickle.load(outputFile)
+# wholeTestVocabularyList = pickle.load(outputFile)
+# 
+# wholeVocabularyFrequency = pickle.load(outputFile)
+# wholeTestVocabularyFrequency = pickle.load(outputFile)
 
 # A dictionary which keeps entire vocabulary and its frequency across whole categories
 # Example : {'current' : 110, 'said' : 10000 ...... }
-wholeVocabularyFrequencyDict = pickle.load(outputFile)
-wholeVocabularyTestFrequencyDict = pickle.load(outputFile)
-
-# for key, val in wholeVocabularyFrequencyDict.iteritems():
-#     print str(key) + "\t" + str(val)
-# 
-# print
-# print
-# 
-# for key1, value1 in categoryAlphaNumericStrStemmedDict.iteritems():
-#     for key, value in value1.iteritems():
-#         print str(key1) + "\t" + str(key) + "\t" + str(value)
+# wholeVocabularyFrequencyDict = pickle.load(outputFile)
+# wholeVocabularyTestFrequencyDict = pickle.load(outputFile)
 
 # A dictionary which keeps number of files in each category
 # Example : {'acq': 115, 'alum': 222 ...}
-numberOfFilesInEachCategoryDict = pickle.load(outputFile)
-numberOfFilesInEachCategoryTestDict = pickle.load(outputFile) 
+# numberOfFilesInEachCategoryDict = pickle.load(outputFile)
+# numberOfFilesInEachCategoryTestDict = pickle.load(outputFile) 
 
 # A dictionary which keeps fraction of [number of files in each category] / [number of entire files]
 # Example : {'acq':0.015, 'alum':0.031 ...}
-fractionOfFilesInEachCategoryDict = pickle.load(outputFile) 
-fractionOfFilesInEachCategoryTestDict = pickle.load(outputFile) 
+# fractionOfFilesInEachCategoryDict = pickle.load(outputFile) 
+# fractionOfFilesInEachCategoryTestDict = pickle.load(outputFile) 
 
 
 categoryNum = pickle.load(outputFile)
@@ -154,12 +135,10 @@ fileTestNum = pickle.load(outputFile)
 #           commonplac   commonwealth  commun
 #    acq         7              2         0
 #    bop         8              9         1 
-termFrequencyPerCategoryList = pickle.load(outputFile)
+# termFrequencyPerCategoryList = pickle.load(outputFile)
 
-
-
-print "Object loading finished. Elapsed Time:\t" + str(round((time.time() - startTime),2))
-print
+print "Object loading finished. Elapsed Time: " + str(time.time() - startTime)
+# print
 # print categoryNum
 # print fileNum
 # print categoryTestNum
@@ -190,241 +169,57 @@ categoryAlphaNumericStrStemmedTFIDFUnitVectorDict = {}
 fileTestAlphaNumericStrStemmedNormalizedTFDict = {}
 fileTestAlphaNumericStrStemmedNormalizedTFUnitVectorDict = {}
 
-# test file and cosine score between it and category
-# {file : {cat1: 0.89, cat2 : 0.94}}
 fileTestCosineDistancePerCategory = {}
 
-# test file and cosine score between it and category. ordered by score (desc).
-# {file : [cat1, cat2, ... ]}
-fileTestCosineDistanceOrderedByScorePerCategory = {}
+# Define TF-IDF based Cosine Similarity algorithm in Detail    
+def tfidfCosineSimilarityDetail():
+    print "\nTF-IDF Cosine Similarity Algorithm\n"
 
-categoryTestCosineDistanceForFilesInIt = {}
-categoryTestCosineDistanceForFilesInItWithoutScoreList = {}
+def save_obj(obj, name):
+    with open('obj/'+ name + '.pkl', 'wb') as f:
+        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
 
-# {file:it's predicted category}
-fileTestPredictionResultDict = {}
+def load_obj(name):
+    with open('obj/' + name + '.pkl', 'r') as f:
+        return pickle.load(f)
 
-# Define TF-IDF based Cosine Similarity algorithm
-def tfidfCosineSimilarity(list):
-    global categoryAlphaNumericStrStemmedDict, categoryAlphaNumericStrStemmedNormalizedTFDict, wholeVocabularyIDFDict
-    totalFrequencyCountPerCategory = {}
-    
-    startT = time.time()
-    
-    # Calculating Normalized TF for each category
-    # key:category, value:{term:frequency ...}
-    for key, value in categoryAlphaNumericStrStemmedDict.iteritems():
-    
-        tmpTotalCountPerCategory = 0
-        tmpNormalizedFrequencyPerCategory = {}
-            
-        # key1:term, value1:frequency
-        for key1, value1 in value.iteritems():
-            tmpTotalCountPerCategory += value1
-            
-        totalFrequencyCountPerCategory[key] = tmpTotalCountPerCategory
-        
-        # Put Normalized Frequency
-        for key1, value1 in value.iteritems():
-            tmpNormalizedFrequencyPerCategory[key1] = float(value1) / float(tmpTotalCountPerCategory)
-            
-        categoryAlphaNumericStrStemmedNormalizedTFDict[key] = tmpNormalizedFrequencyPerCategory
-
-    # Calculating Inverse Document Frequency (IDF) for each term
-    # key: keyword
-    for key in wholeVocabularyList:
-        tmpTotalCountPerCategory = 0
-        
-        # key1:category, value1:{term:frequency ...}
-        for key1, value1 in categoryAlphaNumericStrStemmedDict.iteritems():
-            
-            # If keyword is found in a category:
-            if key in value1:
-                tmpTotalCountPerCategory += 1
-
-        wholeVocabularyIDFDict[key] = 1 + math.log(float(categoryNum) / float(tmpTotalCountPerCategory))
-    
-    # Calculate TF * IDF Score for each term
-    # and Make TF*IDF Vector to Unit Vector
-    # key: category, value: {term:frequency}
-    for key,value in categoryAlphaNumericStrStemmedNormalizedTFDict.iteritems():
-        
-        tmpTFIDFDictPerCategory = {}
-        tmpTFIDFUnitVectorDictPerCategory = {}
-        tmpTFIDFDistance = 0
-
-        # key1: term, value1 : frequency
-        for key1, value1 in value.iteritems():
-            tmp = value1 * wholeVocabularyIDFDict[key1]
-            tmpTFIDFDictPerCategory[key1] = tmp
-            tmpTFIDFDistance += tmp * tmp
-            
-        categoryAlphaNumericStrStemmedTFIDFDict[key] = tmpTFIDFDictPerCategory
-    
-        # Create unit Vector
-        # key1: term, value1 : frequency
-        for key1, value1 in value.iteritems():
-            tmpTFIDFUnitVectorDictPerCategory[key1] = tmpTFIDFDictPerCategory[key1] / math.sqrt(float(tmpTFIDFDistance))
-            
-        categoryAlphaNumericStrStemmedTFIDFUnitVectorDict[key] = tmpTFIDFUnitVectorDictPerCategory
-   
-#     for key1, value1 in categoryAlphaNumericStrStemmedTFIDFUnitVectorDict['livestock'].iteritems():
-#         print key1 + "\t" + str(value1)
-
-   
-    print "[TF-IDF] Training Time:\t" + str(round((time.time() - startT),2))
-
-    startTestT = time.time()
-        
-    # Now, Calculate Normalized TF for each TEST document
-    # key:filename, value : {'category' : {'term':frequency ... }}
-    for key, value in fileTestAlphaNumericStrStemmedDict.iteritems():
-        
-        #  key1: category, value1: {term:frequency ...}
-        for key1, value1 in value.iteritems():
-            
-            tmpTotalCountPerCategory = 0
-            tmpNormalizedFrequencyPerCategory = {}
-            tmpTFIDFUnitVectorDictPerCategory = {}
-            tmpTFIDFDistance = 0.0
-            
-            # Calculate Total Frequency
-            # key2: term, value2: frequency
-            for key2, value2 in value1.iteritems():
-                tmpTotalCountPerCategory += value2
-            
-            for key2, value2 in value1.iteritems():
-                tmp = float(value2) / float(tmpTotalCountPerCategory)
-                if key2 in wholeVocabularyIDFDict:
-                    tmp = tmp * wholeVocabularyIDFDict[key2]
-                tmpNormalizedFrequencyPerCategory[key2] = tmp 
-                tmpTFIDFDistance += tmp * tmp
-                
-            for key2, value2 in value1.iteritems():
-                tmpTFIDFUnitVectorDictPerCategory[key2] = tmpNormalizedFrequencyPerCategory[key2] / math.sqrt(float(tmpTFIDFDistance))
-                
-        fileTestAlphaNumericStrStemmedNormalizedTFDict[key] = tmpNormalizedFrequencyPerCategory
-        fileTestAlphaNumericStrStemmedNormalizedTFUnitVectorDict[key] = tmpTFIDFUnitVectorDictPerCategory
-        
-#     for key1, value1 in fileTestAlphaNumericStrStemmedNormalizedTFUnitVectorDict['0009701'].iteritems():
-#         print key1 + "\t" + str(value1)
-
-    # Calculate Cosine Distance For each test file VS each category
-    count = 0
-    
-    # key : test file name, value : { term : TF in Unit Vector ... }
-    for key, value in fileTestAlphaNumericStrStemmedNormalizedTFUnitVectorDict.iteritems():
-        
-        tmpCosineDistancePerCategory = {}
-            
-        # key1 : term, value1 : TF in Unit vector
-        for key1, value1 in value.iteritems():
-                
-            # key2 : category, value2: {term, TF*IDF in Unit Vector}
-            for key2, value2 in categoryAlphaNumericStrStemmedTFIDFUnitVectorDict.iteritems():
-                
-                # Found 
-                if key1 in value2:
-                    if key2 in tmpCosineDistancePerCategory:
-                        tmpCosineDistancePerCategory[key2] += value1 * value2[key1]
-                    else:
-                        tmpCosineDistancePerCategory[key2] = 0
-                # Not Found
-                else:
-                    if not key2 in tmpCosineDistancePerCategory:
-                        tmpCosineDistancePerCategory[key2] = 0
-                
-        fileTestCosineDistancePerCategory[key] = tmpCosineDistancePerCategory
-        count = count + 1
-#         print count
-                
-        # print "File " + key + " calculation finished."
-        # if key == '0012670':
-        #     print fileTestCosineDistancePerCategory[key]
-                    
-#     for key, val in fileTestCosineDistancePerCategory['0009613'].iteritems():
-#         print key + "\t" + str(val)   
-    
-    # Count correctly distributed result
-    correctCount = 0
-    
-    #key : fileName, value : {category : cosine score}
-    for key, value in fileTestCosineDistancePerCategory.iteritems():
-        
-        maxScore = -1
-        maxCategory = ""
-
-        tmpSorted = sorted(value, key=value.get, reverse=True)
-        fileTestCosineDistanceOrderedByScorePerCategory[key] = tmpSorted
-
-        #key1 : category, value1 : cosine score
-        for key1, value1 in value.iteritems():
-
-            # Create results of files for each category: {cat : {file : cosine-score}}
-            try:
-                categoryTestCosineDistanceForFilesInIt[key1][key] = value1
-            except KeyError:
-                categoryTestCosineDistanceForFilesInIt[key1] = {key : value1}
-
-            # print key1 + "\t" + str(value1)
-            # if value1 > maxScore:
-            #     maxScore = value1
-            #     maxCategory = key1
-
-        # print key + " " + str(fileTestCosineDistanceOrderedByScorePerCategory[key])
-        # print key
-        # print str(fileTestCosineDistanceOrderedByScorePerCategory[key][0]) + " " + key
-        maxScore = fileTestCosineDistancePerCategory[key][fileTestCosineDistanceOrderedByScorePerCategory[key][0]]
-        maxCategory = fileTestCosineDistanceOrderedByScorePerCategory[key][0]
-
-        if maxCategory in fileTestBelongCategory[key]:
-            correctCount += 1
-            #print key + ":" + key1
-
-            # print key + "\t" + maxCategory + "\t" + "O" + "\t" + str(fileTestBelongCategory[key])
-        # else:
-            # print key + "\t" + maxCategory + "\t" + "X" + "\t" + str(fileTestBelongCategory[key])
-
-    # create cat: file relationship. without cosine score.
-    for key, val in categoryTestCosineDistanceForFilesInIt.iteritems():
-        categoryTestCosineDistanceForFilesInItWithoutScoreList[key] = sorted(val, key=val.get, reverse=True)
-
-    # create file : category relationship
-    # key : category, val : list of files
-    for key,val in categoryTestCosineDistanceForFilesInItWithoutScoreList.iteritems():
-        for file in val:
-            fileTestPredictionResultDict[file] = key
-
-    # print fileTestCosineDistancePerCategory
-
-    # print categoryTestCosineDistanceForFilesInItWithoutScoreList['acq']
-    # print categoryTestCosineDistanceForFilesInIt['acq']
-
-    print "[TF-IDF] Testing Time:\t" + str(round((time.time() - startTestT),2))
-    print "[TF-IDF] Overall Time:\t" + str(round((time.time() - startT),2))
-    print "[TF-IDF] Number of Correct Result:\t" + str(correctCount)
-    print "[TF-IDF] Number of Total Result:\t" + str(len(fileTestCosineDistancePerCategory))
-    print "[TF-IDF] Percentage of Simple Correct Result:\t" + str(float(correctCount) / float(len(fileTestCosineDistancePerCategory)))
-
-    # print categoryTestCosineDistanceForFilesInItWithoutScoreList['acq']
-
-
-# Return TOP k files for given categories
-def returnTOPKfilesInTheCategory(cat, k=1):
-    arrayLength = len(categoryTestCosineDistanceForFilesInItWithoutScoreList[cat])
-    if k > arrayLength:
-        return categoryTestCosineDistanceForFilesInItWithoutScoreList[cat][0:arrayLength]
+# Define Decision Tree algorithm.
+def decisionTree(training_list, testing_list, fileTestBelongCategory, words_name, use_version2=True):
+    print "-----------------------------------------------------------------------------------------"
+    print "\nDecision Tree Algorithm\n"
+    if use_version2:
+        # adjust_depth_dict = {}
+        # for max_depth in range(10, 121, 10):
+        #     DT.decisionTree_version2(training_list, testing_list, max_depth=max_depth, adjust_depth_dict=adjust_depth_dict)
+        # save_obj(adjust_depth_dict, 'adjust_depth')
+        DT.decisionTree_version2(training_list, testing_list, fileTestBelongCategory)
     else:
-        return categoryTestCosineDistanceForFilesInItWithoutScoreList[cat][0:k]
+        DT.decisionTree_version1(training_list, testing_list, words_name, num_trainning_file=200, num_features=1000) # num_trainning_file=len(training_list), num_features=len(training_list[0]) - 1
 
-# Return TOP k categories for given filename
-def createTfIdf(filename, k=1):
-    arrayLength = len(fileTestCosineDistanceOrderedByScorePerCategory[filename])
-    if k > arrayLength:
-        return fileTestCosineDistanceOrderedByScorePerCategory[filename][0:arrayLength]
-    else:
-        return fileTestCosineDistanceOrderedByScorePerCategory[filename][0:k]
+# Define Decision Tree Algorithm in detail
+def decisionTreeDetail(list):
+    print "\nDecision Tree Algorithm\n"
 
+# Define Naive Bayes algorithm
+def naiveBayes(list):
+    print "\nNaive Bayes Algorithm\n"
+
+# Define Naive Bayes algorithm in detail
+def naiveBayesDetail(list):
+    print "\nNaive Bayes Algorithm\n"
+
+# Execute TF-IDF based Cosine Similarity algorithm
+# tfidfCosineSimilarity(termFrequencyPerCategoryList)
+
+# Execute Decision Tree algorithm
+# decisionTree(frequencyInFilePerCategoryInTrainingSetList, frequencyInFilePerCategoryInTestSetList, fileTestBelongCategory, wholeVocabularyFromTrainingAndTestSetList)
+
+
+# clf = DT.create_decision_tree(frequencyInFilePerCategoryInTrainingSetList, max_depth=80)
+clf = DT.create_decision_tree(frequencyInFilePerCategoryInTrainingSetList)
+top_k_categories = DT.get_top_k_prediction_class(clf, frequencyInFilePerCategoryInTestSetList[0], k=1)
+# print top_k_categories
+# print len(frequencyInFilePerCategoryInTestSetList)
 
 # Confusion Matrix - row : true test category, column - true column category
 realCategorySize = len(categoryAlphaNumericStrStemmedDict.keys())
@@ -442,21 +237,29 @@ confusionTableArray = []
 
 fScorePerCategoryTest = {}
 
-
 # Create Confusion Matrix. row: Actual. col: Predicted
 def createConfusionMatrix():
 
+    startCMTime = time.time()
+    num_correct = 0
+
     # strArr = ""
 
-    # key: filename, value: categories that this file belongs (Actual)
-    for key, value in fileTestBelongCategory.iteritems():
+    for testList in frequencyInFilePerCategoryInTestSetList:
+        fileName = testList[-1]
 
-        # key1 : each category that this file belongs (Actual)
-        for key1 in value:
-            predictedCategoryList = createTfIdf(key, 1)
-            predictedCategory = predictedCategoryList[0]
-            confusionMatrix[categoryTestToIndexDict[key1],categoryTestToIndexDict[predictedCategory]] += 1
+        # value: categories that this file belongs (Actual)
+        for value in fileTestBelongCategory[fileName]:
 
+            predictedCategory = clf.predict(testList[0:len(testList)-2])
+            if predictedCategory in fileTestBelongCategory[fileName]:
+                num_correct += 1
+
+            # predictedCategoryList = DT.get_top_k_prediction_class(clf, testList, 1)
+            # predictedCategory = predictedCategoryList[0]
+            confusionMatrix[categoryTestToIndexDict[value],categoryTestToIndexDict[predictedCategory[0]]] += 1
+
+    print "number of correct result:\t" + str(num_correct)
     # for i in range(0,realCategorySize):
     #     for j in range(0,realCategorySize):
     #         strArr += str(confusionMatrix[i][j]) + " "
@@ -520,8 +323,8 @@ def createConfusionMatrix():
         else:
             accuracyTest[key] = 0.0
 
-    print (confusionTable[0,0], confusionTable[0,1], confusionTable[1,0], confusionTable[1,1])
-    #Precision : TP / (TP + FP)
+    # print (confusionTable[0,0], confusionTable[0,1], confusionTable[1,0], confusionTable[1,1])
+    # Precision : TP / (TP + FP)
     microAveragePrecision = float(confusionTable[0,0]) / float((confusionTable[0,0] + confusionTable[1,0]))
 
     macroAveragePrecision = np.mean(precisionTest.values())
@@ -532,7 +335,7 @@ def createConfusionMatrix():
     macroAverageRecall = np.mean(recallTest.values())
 
     #Accuracy : (TP) / TP + FN
-    microAverageAccuracy = float(confusionTable[0,0]) / float((confusionTable[0,0] + confusionTable[0,1]))
+    microAverageAccuracy = float(confusionTable[0,0]) / float(confusionTable[0,0] + confusionTable[0,1])
 
     macroAverageAccuracy = np.mean(accuracyTest.values())
 
@@ -592,7 +395,7 @@ def createConfusionMatrix():
 
             # Accuracy
             if TP + FN != 0:
-                accuracyTestWithoutZeroFileCategory[key] = float(TP) / float((TP + FN))
+                accuracyTestWithoutZeroFileCategory[key] = float(TP) / float(TP + FN)
             else:
                 accuracyTestWithoutZeroFileCategory[key] = 0.0
 
@@ -637,11 +440,6 @@ def createConfusionMatrix():
     print "[Confusion Matrix] Macro Average Accuracy (0 file Category excluded):\t" + str(macroAverageAccuracyWithoutZeroFileCategory)
     print "[Confusion Matrix] Macro Average F-Score (0 file Category excluded) :\t" + str(macroAverageFScoreWithoutZeroFileCategory)
 
-#     np.set_printoptions(threshold='nan')
-# 
-#     print "\nNow Printing Confusion Matrix...\n"
-#     print repr(confusionMatrix)
-
     # print "[Confusion Matrix] Maximum F-Score (excluding Categories without Files):\t" + str(max(fScorePerCategoryTestWithoutZeroFileCategory.values()))
     # print "[Confusion Matrix] Minimum F-Score (excluding Categories without Files):\t" + str(min(fScorePerCategoryTestWithoutZeroFileCategory.values()))
     # print "[Confusion Matrix] Maximum F-Score:\t" + str(max(fScorePerCategoryTest.values()))
@@ -651,23 +449,34 @@ def createConfusionMatrix():
     # for key, val in fScorePerCategoryTest.iteritems():
     #     print str(key) + "\t" + str(val)
 
-# Execute TF-IDF based Cosine Similarity algorithm
-tfidfCosineSimilarity(termFrequencyPerCategoryList)
+    print "Time for Testing:\t" + str(round(time.time()-startCMTime,3))
+
+    np.set_printoptions(threshold='nan')
+
+    print "\nNow Printing Confusion Matrix...\n"
+    print repr(confusionMatrix)
 
 # Execute ConfusionMatrix
-createConfusionMatrix()
+# createConfusionMatrix()
+
+# Execute NaiveBayes algorithm
+# naiveBayes(termFrequencyPerCategoryList)
+
+file_category_matrix = DT.get_file_category_matrix(clf, frequencyInFilePerCategoryInTestSetList)
+top_k_file = DT.getTopCategory(file_category_matrix, 'alum', 3)
+
+print str(top_k_file)
 
 
 # AUC PR curve
-print "Test with AUCPR of 2 categories"
- 
+print "Drawing PR curve" 
 # test phase for AUC of tfidf
 def create_CategoryAUC(categoryList):  
     # {'acq':['1', '2'], 'cad':['3', '4'] ...}
     categoryAssigFileTFIDF = {} 
    
     for cat in categoryList: 
-        categoryAssigFileTFIDF[cat] = returnTOPKfilesInTheCategory(cat, len(fileTestAlphaNumericStrStemmedDict.keys()))
+        categoryAssigFileTFIDF[cat] = DT.getTopCategory(cat, len(fileTestAlphaNumericStrStemmedDict.keys()))
                 
     return categoryAssigFileTFIDF      
   
@@ -676,8 +485,8 @@ categoryTestList  = assignedCategoryTest.keys()
 categoryAssigFileTFIDF = create_CategoryAUC(categoryTestList)   
 
 # compute tp, fn, fp, tn, result: 'acq' : ['001', '002','31313'] based on assignedCategoryTest
-def get_tpfn_fptn(predFiles, trueFiles): 
            
+def get_tpfn_fptn(predFiles, trueFiles): 
     tp = len(set(trueFiles).intersection(set(predFiles)))
     fn = len(set(trueFiles).difference(set(predFiles)))
     fp = len(set(predFiles).difference(set(trueFiles)))
@@ -701,7 +510,7 @@ def get_precisons_recalls(_category):
     precisions =[]
     recalls =[]
         
-    for k in numpy.arange(1, len(fileTestAlphaNumericStrStemmedDict.keys()) + 1, 1):
+    for k in np.arange(1, len(fileTestAlphaNumericStrStemmedDict.keys()) + 1, 1):
         # get k documents
         predFiles = categoryAssigFileTFIDF[_category][0:k]    
         #print predFiles
@@ -709,24 +518,35 @@ def get_precisons_recalls(_category):
         precisions.append(precision)
         recalls.append(recall)
     return precisions, recalls
-  
-#check with each category
-count = 0
-for i in range(20):
-#for category in [categoryTestList[0], categoryTestList[1], categoryTestList[19], categoryTestList[21]]:   
-    category = categoryTestList[i]                
-    count += 1
+
+
+# Store information of curve in to curveInfo: {'a':[[0.1,0.2,0.3], [0.3,0.4,0.5]], 'b':[[0.1,0.2], [0.1,0.2]]}
+# 'a': category name, [0.1, 0.2, 0.3] is precisions and [0.3,0.4,0.5] is recalls of all instance k = 1, k = 2, k = 3
+curveInfo = {}
+for i in np.arange(0, len(categoryTestList), 1):
+    category = categoryTestList[i]  
     precisions, recalls = get_precisons_recalls(category) 
-    fig = plt.figure(count)
+    curveInfo[category] = [precisions, recalls]
+pickle.dump(curveInfo, curveFile, -1)
+   
+   
+# drawing best curve
+# Reuter
+#for category in ['acq', 'dlr', 'money-fx' , 'earn']:   
+# 20groups
+# for category in ['talk.politics.mideast','rec.autos', 'misc.forsale', 'comp.windows.x', 'comp.sys.mac.hardware', 'misc.forsale']:
+# ohsumed
+
+'''
+for category in ['C20', 'C19', 'C14', 'C13', 'C12', 'C04', 'C10', 'C21']:             
+    precisions, recalls = get_precisons_recalls(category) 
+    fig = plt.figure(category)
     plt.xlabel('Recall')
     plt.ylabel('Precision')
     plt.title(category)
     plt.plot(recalls, precisions)
     fig.show()
 plt.show()
-
+'''
 print "DONE"
-
-
-
 

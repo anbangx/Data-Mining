@@ -86,7 +86,10 @@ class PivotDecisionTree():
             node.prediction = node.local_data[self.response].value_counts()
             node.size = sum(node.prediction[key] for key in node.prediction.keys())
             node.size = float(node.size)
-            node.prediction = {key: node.prediction[key]/node.size for key in node.prediction.keys()}
+            node.prediction = {}
+            for key in node.prediction.keys():
+                node.prediction[key] = node.prediction[key]/node.size
+            # node.prediction = {key: node.prediction[key]/node.size for key in node.prediction.keys()}
 
             key, value = max(node.prediction.iteritems(), key=lambda x: x[1])
             node.predicted_class = key
@@ -427,3 +430,13 @@ def get_top_k_prediction_class(clf, file, k=1, debug=False):
     if debug:
         print 'The top k predication class is ' + str(top_k)
     return top_k
+
+def get_file_category_matrix(clf, frequencyInFilePerCategoryInTestSetList):
+    file_list = [row[-1] for row in frequencyInFilePerCategoryInTestSetList]
+    category_list = clf.classes_
+    data = clf.predict_proba([row[:-2] for row in frequencyInFilePerCategoryInTestSetList])
+    file_category_matrix = pd.DataFrame(data, index=file_list, columns=category_list)
+    return file_category_matrix
+
+def getTopCategory(file_category_matrix, category, k):
+    return file_category_matrix.sort(category, ascending=False)[category].head(k).index.values

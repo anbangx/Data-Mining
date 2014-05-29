@@ -1,17 +1,23 @@
-from nltk.stem.porter import *
+'''
+Created on Mar 7, 2014
+
+@author: YENHOANG
+'''
+from operator import itemgetter
+import re
 import time
 import cPickle as pickle
+import copy
 import math
 import numpy as np
-
-
-
-# import cs277.DecisionTree.DT as DT
-import DecisionTree.DT as DT
+import sys
+import matplotlib.pyplot as plt
 
 #
 # Pre-Process Part
 #
+
+startTime = time.time()
 
 # Set fraction size and prefix path
 # File Fraction size to Read. Set between 0.1 and 1
@@ -32,15 +38,13 @@ if len(sys.argv) >= 2:
 if len(sys.argv) == 3:
     prefixPath = sys.argv[2]
 
-
-startTime = time.time()
 dataSet = prefixPath.split('/')[2]
 print "Data Set to be used:\t" + dataSet
-outputFile = open('pre_processed_data_object_decision_tree_' + dataSet + "_" + str(fileTestFractionSize), 'rb')
+inputFile = open('pre_processed_data_object_naivebayes_' + dataSet + "_" + str(fileTestFractionSize), 'rb')
 
 # File Fraction size to Read. Set between 0.1 and 1
-fileFractionSize = pickle.load(outputFile)
-fileTestFractionSize = pickle.load(outputFile)
+fileFractionSize = pickle.load(inputFile)
+fileTestFractionSize = pickle.load(inputFile)
 
 print "Fraction to be used:\t" + str(fileTestFractionSize)
 
@@ -50,80 +54,50 @@ strPattern = re.compile('[^a-zA-Z0-9 ]')
 # A dictionary which keeps token and its frequency for each category. It will keep a Dictionary in a Dictionary.
 # key - category, value-{'term':frequency}
 # Example : {'acq' : {'hi':1,'compu':3,'move':1 ...}}
-categoryAlphaNumericStrStemmedDict = pickle.load(outputFile)
-categoryTestAlphaNumericStrStemmedDict = pickle.load(outputFile)
+categoryAlphaNumericStrStemmedDict = pickle.load(inputFile)
+categoryTestAlphaNumericStrStemmedDict = pickle.load(inputFile)
 
 # A dictionary which keeps token, its frequency, and category for each file. It is layered Dictionary structure.
 # 1st layer Dict {A}: key - category, value-{'term':frequency}
 # 2nd layer Dict {B}: key - filename, value-{A}
 # Example : {'000056' : {'acq' : {'hi':1, 'compu:3, 'move':1 ...}}}
-# fileAlphaNumericStrStemmedDict = pickle.load(outputFile)
-# fileTestAlphaNumericStrStemmedDict = pickle.load(outputFile)
+fileAlphaNumericStrStemmedDict = pickle.load(inputFile)
+fileTestAlphaNumericStrStemmedDict = pickle.load(inputFile)
 
 # A dictionary which keeps test filename, and its categories in Set
 # {'000056' : ('acq', 'alum')}
-fileBelongCategory = pickle.load(outputFile)
-fileTestBelongCategory = pickle.load(outputFile)
-
-assignedCategoryTest = {}
-
-#key: filename, val: categories that this test file belongs
-for key, val in fileTestBelongCategory.iteritems():
-    for cat in val:
-        try:
-            assignedCategoryTest[cat].append(key)
-        except KeyError:
-            assignedCategoryTest[cat] = []
-            assignedCategoryTest[cat].append(key)
-
-# print fileTestBelongCategory
-
-# For entire vocabularies in the training set, create a dictionary that a list (value) which contains frequency per category (key)
-# Orders of vocabularies are same for every list. The order is as same as that of in wholeVocabularyFromTrainingAndTestSetList.
-# Example : { 'category' : '[frequency for 'said', frequency for 'mln' ...]', 'category' : '[frequency for 'said', frequency for 'mln' ...]'  
-# normalizedFrequencyPerCategoryInTrainingSetDict = pickle.load(outputFile)
-
-frequencyInFilePerCategoryInTrainingSetList = pickle.load(outputFile)
-frequencyInFilePerCategoryInTestSetList = pickle.load(outputFile)
-
-# For entire vocabularies in the test set, create a dictionary that a list (value) which contains frequency per file (key)
-# Orders of vocabularies are same for every list. The order is as same as that of in wholeVocabularyFromTrainingAndTestSetList.
-# Example : { '0001268' : '[frequency for 'said', frequency for 'mln' ...]', 'category' : '[frequency for 'said', frequency for 'mln' ...]'   
-
-# normalizedFrequencyPerTestFileDict = pickle.load(outputFile)
-
-# Entire Vocubulary List which include every terms from the training set and test set.
-wholeVocabularyFromTrainingAndTestSetList = pickle.load(outputFile)
+fileBelongCategory = pickle.load(inputFile)
+fileTestBelongCategory = pickle.load(inputFile)
 
 # A list which keeps whole vocabularies throughout whole categories. It will be sorted.
 # Example : ['current', 'curtail', 'custom', 'cut', 'cuurent', 'cvg', 'cwt', 'cypru', 'cyrpu', 'd', 'daili' ...]
-# wholeVocabularyList = pickle.load(outputFile)
-# wholeTestVocabularyList = pickle.load(outputFile)
-# 
-# wholeVocabularyFrequency = pickle.load(outputFile)
-# wholeTestVocabularyFrequency = pickle.load(outputFile)
+wholeVocabularyList = pickle.load(inputFile)
+wholeTestVocabularyList = pickle.load(inputFile)
+
+wholeVocabularyFrequency = pickle.load(inputFile)
+wholeTestVocabularyFrequency = pickle.load(inputFile)
 
 # A dictionary which keeps entire vocabulary and its frequency across whole categories
 # Example : {'current' : 110, 'said' : 10000 ...... }
-# wholeVocabularyFrequencyDict = pickle.load(outputFile)
-# wholeVocabularyTestFrequencyDict = pickle.load(outputFile)
+wholeVocabularyFrequencyDict = pickle.load(inputFile)
+wholeVocabularyTestFrequencyDict = pickle.load(inputFile)
 
 # A dictionary which keeps number of files in each category
 # Example : {'acq': 115, 'alum': 222 ...}
-# numberOfFilesInEachCategoryDict = pickle.load(outputFile)
-# numberOfFilesInEachCategoryTestDict = pickle.load(outputFile) 
+numberOfFilesInEachCategoryDict = pickle.load(inputFile)
+numberOfFilesInEachCategoryTestDict = pickle.load(inputFile) 
 
 # A dictionary which keeps fraction of [number of files in each category] / [number of entire files]
 # Example : {'acq':0.015, 'alum':0.031 ...}
-# fractionOfFilesInEachCategoryDict = pickle.load(outputFile) 
-# fractionOfFilesInEachCategoryTestDict = pickle.load(outputFile) 
+fractionOfFilesInEachCategoryDict = pickle.load(inputFile) 
+fractionOfFilesInEachCategoryTestDict = pickle.load(inputFile) 
 
 
-categoryNum = pickle.load(outputFile)
-fileNum = pickle.load(outputFile)
+categoryNum = pickle.load(inputFile)
+fileNum = pickle.load(inputFile)
 
-categoryTestNum = pickle.load(outputFile)
-fileTestNum = pickle.load(outputFile)
+categoryTestNum = pickle.load(inputFile)
+fileTestNum = pickle.load(inputFile)
 
 
 # A two dimensional List which keeps frequency of term per category. 
@@ -133,91 +107,140 @@ fileTestNum = pickle.load(outputFile)
 #           commonplac   commonwealth  commun
 #    acq         7              2         0
 #    bop         8              9         1 
-# termFrequencyPerCategoryList = pickle.load(outputFile)
-
-print "Object loading finished. Elapsed Time: " + str(time.time() - startTime)
-# print
-# print categoryNum
-# print fileNum
-# print categoryTestNum
-# print fileTestNum
-
-# print len(fileTestAlphaNumericStrStemmedDict)
-
-# print wholeVocabularyTestFrequencyDict
-
-# print len(wholeVocabularyList)
-# print len(wholeTestVocabularyList)
-# 
-# print wholeVocabularyFrequency
-# print wholeTestVocabularyFrequency
-# 
-# print numberOfFilesInEachCategoryDict['austdlr']
-
-# A dictionary which keeps Normalized TF, IDF, TF * IDF per category
-# categoryAlphaNumericStrStemmedNormalizedTFDict = { 'category' : {'term' : 'normalized frequency', 'term' : ...}}
-# wholeVocabularyIDFDict = { 'term' : 'IDF', 'term' : 'IDF' ...}}
-# categoryAlphaNumericStrStemmedTFIDFDict = { 'category' : {'term' : 'normalized frequency * it's IDF', 'term' : ...}}
-# categoryAlphaNumericStrStemmedTFIDFDict = { 'category' : {'term' : 'TF * IDF is normalized by vector length', 'term' : ...}}
-categoryAlphaNumericStrStemmedNormalizedTFDict = {}
-wholeVocabularyIDFDict = {}
-categoryAlphaNumericStrStemmedTFIDFDict = {}
-categoryAlphaNumericStrStemmedTFIDFUnitVectorDict = {}
-
-fileTestAlphaNumericStrStemmedNormalizedTFDict = {}
-fileTestAlphaNumericStrStemmedNormalizedTFUnitVectorDict = {}
-
-fileTestCosineDistancePerCategory = {}
-
-# Define TF-IDF based Cosine Similarity algorithm in Detail    
-def tfidfCosineSimilarityDetail():
-    print "\nTF-IDF Cosine Similarity Algorithm\n"
-
-def save_obj(obj, name):
-    with open('obj/'+ name + '.pkl', 'wb') as f:
-        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
-
-def load_obj(name):
-    with open('obj/' + name + '.pkl', 'r') as f:
-        return pickle.load(f)
-
-# Define Decision Tree algorithm.
-def decisionTree(training_list, testing_list, fileTestBelongCategory, words_name, use_version2=True):
-    print "-----------------------------------------------------------------------------------------"
-    print "\nDecision Tree Algorithm\n"
-    if use_version2:
-        # adjust_depth_dict = {}
-        # for max_depth in range(10, 121, 10):
-        #     DT.decisionTree_version2(training_list, testing_list, max_depth=max_depth, adjust_depth_dict=adjust_depth_dict)
-        # save_obj(adjust_depth_dict, 'adjust_depth')
-        DT.decisionTree_version2(training_list, testing_list, fileTestBelongCategory)
-    else:
-        DT.decisionTree_version1(training_list, testing_list, words_name, num_trainning_file=200, num_features=1000) # num_trainning_file=len(training_list), num_features=len(training_list[0]) - 1
-
-# Define Decision Tree Algorithm in detail
-def decisionTreeDetail(list):
-    print "\nDecision Tree Algorithm\n"
-
-# Define Naive Bayes algorithm
-def naiveBayes(list):
-    print "\nNaive Bayes Algorithm\n"
-
-# Define Naive Bayes algorithm in detail
-def naiveBayesDetail(list):
-    print "\nNaive Bayes Algorithm\n"
-
-# Execute TF-IDF based Cosine Similarity algorithm
-# tfidfCosineSimilarity(termFrequencyPerCategoryList)
-
-# Execute Decision Tree algorithm
-# decisionTree(frequencyInFilePerCategoryInTrainingSetList, frequencyInFilePerCategoryInTestSetList, fileTestBelongCategory, wholeVocabularyFromTrainingAndTestSetList)
+termFrequencyPerCategoryList = pickle.load(inputFile)
 
 
-# clf = DT.create_decision_tree(frequencyInFilePerCategoryInTrainingSetList, max_depth=80)
-clf = DT.create_decision_tree(frequencyInFilePerCategoryInTrainingSetList)
-top_k_categories = DT.get_top_k_prediction_class(clf, frequencyInFilePerCategoryInTestSetList[0], k=1)
-# print top_k_categories
-# print len(frequencyInFilePerCategoryInTestSetList)
+#[Naive Bayes YEN]
+assignedCategory = pickle.load(inputFile)
+assignedCategoryTest = pickle.load(inputFile)
+fileAssignedCategory = pickle.load(inputFile)
+fileAssignedCategoryTest = pickle.load(inputFile)
+categoryList = pickle.load(inputFile)
+categoryTestList = pickle.load(inputFile)
+wordFrequencyInFile = pickle.load(inputFile)
+wordFrequencyInFileTest = pickle.load(inputFile)
+
+print "Object loading finished. Elapsed Time:\t" + str(round((time.time() - startTime),2))
+print
+ 
+# Naive Bayes Training phase return p(c), p(w|c), V, _fractionOfFilesInEachCategoryDict = Nc/N
+def trainNB(_fractionOfFilesInEachCategoryDict, _categoryAlphaNumericStrStemmedDict, _wholeVocabularyList, alpha):
+    # print "\n Naive Bayes traning phase: "
+    # get probability of each category {'acq':0.04, 'copper':0.1,...}
+    prob_category = _fractionOfFilesInEachCategoryDict
+       
+    # count words in category c and store in dictionary numWord_category = {'acq': 121313, 'copper' : 24242,...}
+    # and get conditional probabilities of each word in Vocabulary
+    numWord_category = {}  # Nc
+    prob_conditional = {}; # p(w|c) = nw/Nc
+       
+    for category in _categoryAlphaNumericStrStemmedDict.keys():       
+        numWord_category[category] = sum(categoryAlphaNumericStrStemmedDict[category].itervalues())
+   
+        prob_word = {}
+        for word in _wholeVocabularyList:
+            if(word in _categoryAlphaNumericStrStemmedDict[category].keys()): 
+                # check with different value of alpha
+                prob_word[word] = float(_categoryAlphaNumericStrStemmedDict[category][word] + alpha)/(numWord_category[category] + alpha*len(_wholeVocabularyList))                 
+            else:
+                prob_word[word] = float(alpha)/(numWord_category[category] + alpha*len(_wholeVocabularyList))             
+        
+        prob_conditional[category] = prob_word 
+      
+    # get vocabulary
+    vocabulary = _wholeVocabularyList;
+    return prob_category, prob_conditional, vocabulary
+   
+# function to extract word from documents       
+def extract(_vocabulary, _fileName, _wordFrequencyInFile):
+    W = []
+    for word in _wordFrequencyInFile[_fileName].keys():
+        if word in _vocabulary:
+            W.append(word)
+    return W
+
+# function to compute precision
+def evaluateResult(_fileAssignedCategoryNV, _fileAssignedCategory):
+    count = 0;
+    for fileName in _fileAssignedCategoryNV.keys():
+        if _fileAssignedCategoryNV[fileName] in _fileAssignedCategory[fileName]:
+            count = count + 1
+    return count
+ 
+
+          
+# CALL TRAINING PHASE
+print "Start training "
+startTime = time.time() 
+prob_category, prob_conditional, vocabulary =   trainNB(fractionOfFilesInEachCategoryDict, categoryAlphaNumericStrStemmedDict, wholeVocabularyList, 0.08)
+endTime = time.time()
+print " Execution Time (" + str(endTime - startTime) + " sec ) -  Training the Data Set"
+    
+    
+#Naive Bayes test phase return list of category
+def testNBMultiLabel(_categoryList, _wordFrequencyInFile, _prob_category, _prob_conditional , _vocabulary, _testFile, k):  
+    # list of top k categories that class can belongs to [ 'a', 'b', 'c']
+    W = extract(_vocabulary, _testFile, _wordFrequencyInFile)
+    scoreCatergories = {}
+    for category in _categoryList:
+            scoreCatergories[category] = math.log10(_prob_category[category])
+            for word in W:                 
+                scoreCatergories[category] += math.log10(_prob_conditional[category][word])
+    # convert to list of tuples
+    temp = sorted(scoreCatergories.items(), key=lambda x: (-x[1], x[0]))
+    # return k categories    
+    result = [score[0] for score in temp[0:k]]
+    return result   
+   
+   
+def createNB(testFile, k):
+    return testNBMultiLabel(categoryTestList, wordFrequencyInFileTest, prob_category, prob_conditional , vocabulary, testFile, k)
+
+#Naive Bayes test phase 
+
+def testNB(_wordFrequencyInFile, k):  
+    # {'001': 'acq', '002': acq', ...}
+    fileAssignedCategoryNV = {} 
+
+    for testFile in _wordFrequencyInFile.keys(): 
+        fileAssignedCategoryNV[testFile] = createNB(testFile, k)
+             
+    return fileAssignedCategoryNV    
+
+
+# Compute ACCURACY each (sigma tpc)/N, with N = total documents in test set # each document belong to 1 class
+fileAssignedCategoryNV = testNB(wordFrequencyInFileTest, 1)
+# convert to categoryAssignedFileNV
+def convertResult(_fileAssignedCategoryNV, _categoryTestList, _wordFrequencyInFileTest):
+    categoryAssignedFileNV = {}
+    for category in categoryTestList:    
+        categoryAssignedFileNV[category] = []
+    # update
+    for testFile in wordFrequencyInFileTest.keys(): 
+        categoryAssignedFileNV[fileAssignedCategoryNV[testFile][0]].append(testFile)
+    return categoryAssignedFileNV
+
+# compute tp for each category
+def compute_tp(_fileAssignedCategoryNV, _categoryTestList, _wordFrequencyInFileTest, _assignedCategoryTest):
+    tp = 0
+    # firstly convert
+    categoryAssignedFileNV = convertResult(_fileAssignedCategoryNV, _categoryTestList, _wordFrequencyInFileTest) 
+    # then compute tp = _assignedCategoryTest intersection with categoryAssignedFileNV for each category
+    for category in categoryAssignedFileNV.keys():
+        tp = tp + len(set(categoryAssignedFileNV[category]).intersection(set(_assignedCategoryTest[category])))
+    return tp
+
+# tp = compute_tp(fileAssignedCategoryNV, categoryTestList, wordFrequencyInFileTest, assignedCategoryTest)
+# print "Accuracy of Naive Bayes: "
+# print float(tp)/len(wordFrequencyInFileTest.keys())
+
+
+
+
+# check with 1 file
+# print "return top 5 categories for file 0010415 "
+# result = createNB('0010415', 5)
+# print result
 
 # Confusion Matrix - row : true test category, column - true column category
 realCategorySize = len(categoryAlphaNumericStrStemmedDict.keys())
@@ -239,25 +262,18 @@ fScorePerCategoryTest = {}
 def createConfusionMatrix():
 
     startCMTime = time.time()
-    num_correct = 0
 
     # strArr = ""
 
-    for testList in frequencyInFilePerCategoryInTestSetList:
-        fileName = testList[-1]
+    # key: filename, value: categories that this file belongs (Actual)
+    for key, value in fileTestBelongCategory.iteritems():
 
-        # value: categories that this file belongs (Actual)
-        for value in fileTestBelongCategory[fileName]:
+        # key1 : each category that this file belongs (Actual)
+        for key1 in value:
+            predictedCategoryList = createNB(key, 1)
+            predictedCategory = predictedCategoryList[0]
+            confusionMatrix[categoryTestToIndexDict[key1],categoryTestToIndexDict[predictedCategory]] += 1
 
-            predictedCategory = clf.predict(testList[0:len(testList)-2])
-            if predictedCategory in fileTestBelongCategory[fileName]:
-                num_correct += 1
-
-            # predictedCategoryList = DT.get_top_k_prediction_class(clf, testList, 1)
-            # predictedCategory = predictedCategoryList[0]
-            confusionMatrix[categoryTestToIndexDict[value],categoryTestToIndexDict[predictedCategory[0]]] += 1
-
-    print "number of correct result:\t" + str(num_correct)
     # for i in range(0,realCategorySize):
     #     for j in range(0,realCategorySize):
     #         strArr += str(confusionMatrix[i][j]) + " "
@@ -332,8 +348,8 @@ def createConfusionMatrix():
 
     macroAverageRecall = np.mean(recallTest.values())
 
-    #Accuracy : (TP) / TP + FN
-    microAverageAccuracy = float(confusionTable[0,0]) / float(confusionTable[0,0] + confusionTable[0,1])
+    #Accuracy : (TP + TN) / TP + TN + FP + FN
+    microAverageAccuracy = float(confusionTable[0,0])/float(confusionTable[0,0] + confusionTable[0, 1])
 
     macroAverageAccuracy = np.mean(accuracyTest.values())
 
@@ -393,7 +409,7 @@ def createConfusionMatrix():
 
             # Accuracy
             if TP + FN != 0:
-                accuracyTestWithoutZeroFileCategory[key] = float(TP) / float(TP + FN)
+                accuracyTestWithoutZeroFileCategory[key] = float(TP) / float((TP + FN))
             else:
                 accuracyTestWithoutZeroFileCategory[key] = 0.0
 
@@ -457,7 +473,104 @@ def createConfusionMatrix():
 # Execute ConfusionMatrix
 createConfusionMatrix()
 
-# Execute NaiveBayes algorithm
-# naiveBayes(termFrequencyPerCategoryList)
-    
 
+# FOR AUC PR CURVE, IF YOU WANT TO CHECK IT YOU CAN UNCOMMENT FOLLOWS PARAGRAPH
+'''
+print "Test with AUCPR of 4 categories"
+def extractWordAllFiles(_vocabulary, _wordFrequencyInFile):
+    W = {}
+    for _testFile in _wordFrequencyInFile.keys():
+        W[_testFile] = extract(_vocabulary, _testFile, _wordFrequencyInFile)
+    return W 
+  
+  
+# We check files in each category
+def testNBMultiLabel_CategoryAUC(_wordFrequencyInFile, _prob_conditional ,_vocabulary,_word,_category):
+    # NEED TO REDUCE EXTRACT W    
+    scoreFiles = {}
+    for _testFile in _wordFrequencyInFile.keys():
+            scoreFiles[_testFile] = 0
+            for word in _word[_testFile]:                 
+                scoreFiles[_testFile] += math.log10(_prob_conditional[_category][word])              
+                  
+    # convert to list of tuples
+    temp = sorted(scoreFiles.items(), key=lambda x: (-x[1], x[0]))
+    # return k categories    
+    result = [score[0] for score in temp[0: len(_wordFrequencyInFile.keys())]]
+          
+    return result  
+  
+# extract all words in test files
+word =  extractWordAllFiles(vocabulary, wordFrequencyInFileTest)
+  
+def createNB_CategoryAUC(_category):
+    return testNBMultiLabel_CategoryAUC(wordFrequencyInFileTest, prob_conditional , vocabulary, word, _category)
+   
+#Naive Bayes test phase for AUC
+def testNB_CategoryAUC(_categoryList):  
+    # {'acq':{'1', '2'}, {'cad': '3', '4'} ...}
+    categoryAssigFileNV = {} 
+   
+    for _category in _categoryList: 
+        categoryAssigFileNV[_category] = createNB_CategoryAUC(_category)
+                
+    return categoryAssigFileNV      
+  
+# call function for test data set
+categoryAssigFileNV = testNB_CategoryAUC(categoryTestList)    
+  
+# test dataset with nonEmpty Category
+nonEmptyCatTest = []
+for category in categoryTestList:
+    if (len(assignedCategoryTest[category])>0):
+        nonEmptyCatTest.append(category)
+  
+# compute tp, fn, fp, tn, result: 'acq' : ['001', '002','31313'] based on assignedCategoryTest
+def get_tpfn_fptn(predFiles, trueFiles): 
+           
+    tp = len(set(trueFiles).intersection(set(predFiles)))
+    fn = len(set(trueFiles).difference(set(predFiles)))
+    fp = len(set(predFiles).difference(set(trueFiles)))
+    tn = len(wordFrequencyInFileTest) - (tp + fn + fp)
+    return tp, fn, fp, tn
+        
+        
+# compute precision and recall
+def get_precision_recall(_predFiles, _trueFiles):   
+    tp, fn, fp, tn = get_tpfn_fptn(_predFiles, _trueFiles)
+    pre = float(tp)/(tp + fp)
+    recall = float(tp)/(tp + fn)
+    accuracy = float((tp + tn))/ (tp + fn + fp + tn)
+    return pre, recall, accuracy      
+   
+   
+# return list of precision and recall based on value of k    
+def get_precisons_recalls(_category):
+       
+    trueFiles = assignedCategoryTest[_category] 
+    precisions =[]
+    recalls =[]
+        
+    for k in numpy.arange(1, len(wordFrequencyInFileTest.keys()) + 1, 1):
+        # get k documents
+        predFiles = categoryAssigFileNV[_category][0:k]    
+        #print predFiles
+        precision, recall, accuracy = get_precision_recall(predFiles, trueFiles)
+        precisions.append(precision)
+        recalls.append(recall)
+    return precisions, recalls
+  
+#check with each category
+count = 0
+for category in [nonEmptyCatTest[0], nonEmptyCatTest[2], nonEmptyCatTest[19], nonEmptyCatTest[21]]:                   
+    count += 1
+    precisions, recalls = get_precisons_recalls(category) 
+    fig = plt.figure(count)
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title(category)
+    plt.plot(recalls, precisions)
+    fig.show()
+plt.show()
+print "DONE"
+'''
